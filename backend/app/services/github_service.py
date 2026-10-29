@@ -11,6 +11,7 @@ class GitHubService:
     - ONLY creates DRAFT pull requests.
     - NEVER merges PRs.
     - Explicit user authorization required.
+    - Accurately reports whether PR is live or dry-run simulated.
     """
 
     @staticmethod
@@ -63,7 +64,6 @@ class GitHubService:
                     "Authorization": f"Bearer {GITHUB_TOKEN}",
                     "Accept": "application/vnd.github.v3+json"
                 }
-                # Create draft PR
                 pr_payload = {
                     "title": f"[DRAFT] {request.pr_title}",
                     "head": branch_name,
@@ -82,22 +82,40 @@ class GitHubService:
                             pr_url=data.get("html_url"),
                             branch_name=branch_name,
                             title=pr_payload["title"],
-                            message="GitHub DRAFT pull request successfully created and submitted for peer review."
+                            message="Live GitHub DRAFT pull request successfully created and submitted for peer review."
                         )
-            except Exception:
-                pass
+                    else:
+                        err_detail = resp.text[:200]
+                        # Report actual error from GitHub API, do not masquerade failure as success
+                        return DraftPRResponse(
+                            success=False,
+                            draft_status="DRAFT (FAILED_API)",
+                            pr_url=None,
+                            branch_name=branch_name,
+                            title=pr_payload["title"],
+                            message=f"GitHub API returned error {resp.status_code}: {err_detail}. Verify token permissions."
+                        )
+            except Exception as e:
+                return DraftPRResponse(
+                    success=False,
+                    draft_status="DRAFT (NETWORK_ERROR)",
+                    pr_url=None,
+                    branch_name=branch_name,
+                    title=f"[DRAFT] {request.pr_title}",
+                    message=f"Network error contacting GitHub API: {str(e)}"
+                )
 
-        # 3. Deterministic Demonstration / Dry-Run Output
-        mock_pr_number = 104
-        simulated_url = f"https://github.com/{owner}/{repo_clean}/pull/{mock_pr_number}"
+        # 3. Transparent Dry-Run / Demonstration Mode (explicitly marked, never claimed as real live PR)
+        simulated_url = f"https://github.com/{owner}/{repo_clean}/pull/104 (Dry Run Preview)"
         return DraftPRResponse(
             success=True,
-            draft_status="DRAFT",
+            draft_status="DRAFT (DRY RUN / SIMULATION)",
             pr_url=simulated_url,
             branch_name=branch_name,
             title=f"[DRAFT] {request.pr_title}",
             message=(
-                f"Draft branch '{branch_name}' prepared and draft pull request registered at {simulated_url}. "
+                f"[DRY RUN / SIMULATION] Draft pull request preview prepared for branch '{branch_name}'. "
+                "No live GitHub API write was executed because GITHUB_TOKEN is not configured. "
                 "Explicit human review is required before merging."
             )
         )

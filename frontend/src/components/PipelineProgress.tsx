@@ -55,3 +55,4 @@ export const PipelineProgress: React.FC<PipelineProgressProps> = ({ isComplete }
     </div>
   );
 };
+

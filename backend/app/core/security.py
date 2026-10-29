@@ -105,3 +105,4 @@ def verify_safe_pull_request_action(action: str) -> None:
     forbidden_actions = {"merge", "auto_merge", "bypass_review", "force_push", "direct_commit_to_main"}
     if action.lower() in forbidden_actions:
         raise RuntimeError(f"CRITICAL SAFETY VIOLATION: PATCHPROOF is prohibited from performing '{action}'. Human review is strictly required.")
+

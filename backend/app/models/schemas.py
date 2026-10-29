@@ -142,3 +142,4 @@ class DemoRepositoryInfo(BaseModel):
     ecosystem: str
     description: str
     expected_findings: str
+

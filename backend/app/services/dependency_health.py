@@ -115,3 +115,4 @@ class DependencyHealthService:
                 ))
 
         return findings
+

@@ -3,7 +3,9 @@ import difflib
 import uuid
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from packaging.version import parse as parse_version, InvalidVersion
 from app.models.schemas import VulnerabilityFinding, RemediationProposal, Component
+from app.core.security import redact_secret_string
 
 class RemediationService:
     @staticmethod
@@ -14,7 +16,7 @@ class RemediationService:
     ) -> List[RemediationProposal]:
         """
         Calculates safe, evidence-backed dependency remediation proposals
-        with unified manifest diffs and suggested tests.
+        with unified manifest diffs, compatibility checks, and secret sanitization.
         """
         proposals: List[RemediationProposal] = []
         
@@ -39,16 +41,31 @@ class RemediationService:
             # Collect verified fixed versions
             fixed_versions = [v.fixed_version for v in pkg_vulns if v.fixed_version]
             if not fixed_versions:
-                # No verified fix
                 continue
 
-            # Pick smallest safe fix (e.g., maximum of required fixes to satisfy all advisories)
-            # Simple version sorter
-            def ver_key(v_str):
-                clean = re.sub(r"[^0-9\.]", "", v_str.split("-")[0])
-                return [int(p) if p.isdigit() else 0 for p in clean.split(".") if p]
+            # Filter candidate fixes to strictly newer versions (never downgrade or reinstall same version)
+            valid_upgrades = []
+            for f in fixed_versions:
+                try:
+                    if parse_version(f) > parse_version(current_ver):
+                        valid_upgrades.append(f)
+                except InvalidVersion:
+                    if f != current_ver:
+                        valid_upgrades.append(f)
 
-            sorted_fixes = sorted(fixed_versions, key=ver_key)
+            if not valid_upgrades:
+                # No verified upgrade strictly newer than installed version
+                continue
+
+            # Pick smallest safe fix that resolves the target advisories
+            def safe_version_key(v_str: str):
+                try:
+                    return parse_version(v_str)
+                except InvalidVersion:
+                    clean = re.sub(r"[^0-9\.]", "", v_str.split("-")[0])
+                    return [int(p) if p.isdigit() else 0 for p in clean.split(".") if p]
+
+            sorted_fixes = sorted(valid_upgrades, key=safe_version_key)
             target_fix = sorted_fixes[-1]
 
             # Generate manifest diff
@@ -59,29 +76,36 @@ class RemediationService:
 
             if manifest_file.exists():
                 try:
-                    orig_text = manifest_file.read_text(encoding="utf-8", errors="ignore")
+                    orig_raw = manifest_file.read_text(encoding="utf-8", errors="ignore")
                     
-                    # Pattern for requirements.txt (e.g. requests==2.19.1)
+                    # Pattern for requirements.txt (handles ==, >=, ~=, and comments)
                     if manifest_file.name.endswith(".txt"):
-                        mod_text = re.sub(
-                            rf"(?i)^({re.escape(pkg_name)}\s*==\s*)[0-9a-zA-Z\.\-_]+",
-                            rf"\g<1>{target_fix}",
-                            orig_text,
+                        mod_raw = re.sub(
+                            rf"(?i)^({re.escape(pkg_name)}\s*(?:==|>=|~=)\s*)[0-9a-zA-Z\.\-_]+(\s*(?:#.*)?)$",
+                            rf"\g<1>{target_fix}\g<2>",
+                            orig_raw,
                             flags=re.MULTILINE
                         )
+                        # Fallback if line wasn't matched (e.g. package==ver without newline anchor)
+                        if mod_raw == orig_raw:
+                            mod_raw = re.sub(
+                                rf"(?i)\b({re.escape(pkg_name)}\s*==\s*)[0-9a-zA-Z\.\-_]+",
+                                rf"\g<1>{target_fix}",
+                                orig_raw
+                            )
                     # Pattern for package.json
                     elif manifest_file.name.endswith(".json"):
-                        mod_text = re.sub(
+                        mod_raw = re.sub(
                             rf'("{re.escape(pkg_name)}"\s*:\s*)"[\^~]?[0-9a-zA-Z\.\-_]+"',
                             rf'\g<1>"^{target_fix}"',
-                            orig_text
+                            orig_raw
                         )
                     else:
-                        mod_text = orig_text.replace(current_ver, target_fix)
+                        mod_raw = orig_raw.replace(current_ver, target_fix)
 
                     # Compute unified diff
-                    orig_lines = orig_text.splitlines(keepends=True)
-                    mod_lines = mod_text.splitlines(keepends=True)
+                    orig_lines = orig_raw.splitlines(keepends=True)
+                    mod_lines = mod_raw.splitlines(keepends=True)
                     diff_gen = difflib.unified_diff(
                         orig_lines,
                         mod_lines,
@@ -89,6 +113,11 @@ class RemediationService:
                         tofile=f"b/{matching_comp.manifest_path}"
                     )
                     diff_text = "".join(diff_gen)
+
+                    # Sanitize any embedded secrets from manifests/diffs
+                    orig_text = redact_secret_string(orig_raw)
+                    mod_text = redact_secret_string(mod_raw)
+                    diff_text = redact_secret_string(diff_text)
                 except Exception:
                     diff_text = f"--- {matching_comp.manifest_path}\n+++ {matching_comp.manifest_path}\n- {pkg_name}=={current_ver}\n+ {pkg_name}=={target_fix}\n"
 

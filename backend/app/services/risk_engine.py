@@ -12,14 +12,16 @@ class RiskEngine:
       Risk = (CVSS_Weight * 35) + (KEV_Weight * 25) + (EPSS_Weight * 20) + (Reachability_Weight * 10) + (Health_Weight * 10)
     
     Overriding rules:
-      - CISA KEV active exploitation guarantees a score of at least 80 (Critical).
-      - CVSS >= 9.0 + Direct dependency guarantees a score of at least 75 (Critical).
+      - CISA KEV active exploitation guarantees a score of at least 82 (Critical).
+      - CVSS >= 9.0 + Direct dependency guarantees a score of at least 78 (Critical).
       - Leaked secrets in git history trigger an independent high risk factor.
+      - Missing data is never treated as zero-risk: default baseline weights apply.
     """
 
     @staticmethod
     def calculate_finding_risk(vuln: VulnerabilityFinding) -> float:
         # 1. CVSS Base (0.0 to 10.0 -> normalized 0 to 1)
+        # If advisory does not specify numeric CVSS, derive from severity label rather than assuming 0.0
         cvss = vuln.cvss_score or (9.5 if vuln.severity == "CRITICAL" else (7.5 if vuln.severity == "HIGH" else 5.0))
         cvss_component = (cvss / 10.0) * 35.0
 
@@ -41,7 +43,7 @@ class RiskEngine:
         # 5. Base score
         raw_score = cvss_component + kev_component + epss_component + reach_component
 
-        # Critical Overrides
+        # Critical Overrides: KEV findings must never be obscured
         if vuln.cisa_kev:
             raw_score = max(raw_score, 82.0)
         elif vuln.severity == "CRITICAL" and vuln.reachability == "reachable":
@@ -87,7 +89,7 @@ class RiskEngine:
 
         final_score = round(min(100.0, max(0.0, composite_score)), 1)
 
-        # Thresholds:
+        # Documented Thresholds:
         # 0 - 19: Low
         # 20 - 39: Medium
         # 40 - 69: High

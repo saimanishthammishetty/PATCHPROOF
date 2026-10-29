@@ -311,3 +311,4 @@ class DependencyParser:
                     )
         except Exception:
             pass
+

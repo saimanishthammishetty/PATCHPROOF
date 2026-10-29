@@ -63,3 +63,4 @@ export const Navbar: React.FC<NavbarProps> = ({ onNewScan, hasActiveAnalysis }) 
     </header>
   );
 };
+

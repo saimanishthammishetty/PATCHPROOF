@@ -39,3 +39,4 @@ def test_parse_secure_go_fixture():
     assert "github.com/google/uuid" in names
     assert names["github.com/google/uuid"].version == "1.6.0"
     assert names["github.com/google/uuid"].ecosystem == "golang"
+

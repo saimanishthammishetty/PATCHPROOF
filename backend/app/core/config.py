@@ -17,3 +17,4 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 # Prohibit merge operations globally
 NEVER_MERGE = True
+

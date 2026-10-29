@@ -78,3 +78,4 @@ graph TD
 
 10. **`audit_service.py`**:
     - Creates tamper-evident logs with SHA-256 integrity hashes for every pipeline event.
+

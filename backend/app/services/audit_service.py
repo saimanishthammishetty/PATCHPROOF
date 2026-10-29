@@ -41,3 +41,4 @@ class AuditService:
 
 # Global in-memory audit service instance
 audit_logger = AuditService()
+

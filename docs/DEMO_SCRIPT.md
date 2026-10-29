@@ -71,3 +71,4 @@ Follow this script to showcase the core capabilities, deterministic risk scoring
    - Review the chronological event log from `ANALYSIS_INITIALIZED` to `DRAFT_PULL_REQUEST_CREATED`.
    - Show that each entry has a cryptographic **SHA-256 integrity hash**.
    - Show that zero secrets or auth tokens exist in the audit logs.
+

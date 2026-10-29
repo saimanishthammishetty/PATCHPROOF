@@ -123,3 +123,4 @@ class SBOMService:
             })
 
         return doc
+

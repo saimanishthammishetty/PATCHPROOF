@@ -43,3 +43,4 @@ def test_overall_risk_clean_repository():
 
     assert overview.score < 20.0
     assert overview.label == "Low"
+

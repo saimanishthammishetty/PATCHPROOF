@@ -55,9 +55,10 @@ class SecretScanner:
                         for sec_name, pattern in SECRET_PATTERNS.items():
                             match = pattern.search(line)
                             if match:
-                                raw_val = match.group(0)
+                                # Extract token value: prefer group 1 if captured, otherwise full match
+                                raw_token = match.group(1) if match.groups() else match.group(0)
                                 # Redact immediately - NEVER expose raw secret
-                                masked = redact_secret_string(raw_val)
+                                masked = redact_secret_string(raw_token)
                                 
                                 findings.append(SecretFinding(
                                     secret_type=sec_name,
@@ -98,8 +99,8 @@ class SecretScanner:
                             for sec_name, pattern in SECRET_PATTERNS.items():
                                 match = pattern.search(added_line)
                                 if match:
-                                    raw_val = match.group(0)
-                                    masked = redact_secret_string(raw_val)
+                                    raw_token = match.group(1) if match.groups() else match.group(0)
+                                    masked = redact_secret_string(raw_token)
                                     # Avoid duplicate findings for same file/secret
                                     if not any(f.masked_value == masked and f.file_path == current_file for f in findings):
                                         findings.append(SecretFinding(

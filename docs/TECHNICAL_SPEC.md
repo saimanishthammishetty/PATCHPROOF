@@ -246,3 +246,4 @@ Refer to the project `README.md` for complete prerequisites and setup instructio
 - Static call-graph AST reachability analysis for Python and JavaScript.
 - VEX (Vulnerability Exploitability eXchange) statement generation in CycloneDX.
 - SARIF export for direct integration into GitHub Advanced Security code scanning alerts.
+

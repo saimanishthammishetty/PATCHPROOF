@@ -98,7 +98,7 @@ export const DraftPRModal: React.FC<DraftPRModalProps> = ({
               <div className="p-4 rounded-xl bg-background-secondary border border-surface-elevated text-left space-y-2 max-w-md mx-auto">
                 <div className="flex justify-between">
                   <span className="text-text-secondary">Draft PR Status:</span>
-                  <span className="text-brand-cyan font-bold">DRAFT (Peer Review Required)</span>
+                  <span className="text-brand-cyan font-bold">{prResult.draft_status}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-secondary">Proposed Branch:</span>

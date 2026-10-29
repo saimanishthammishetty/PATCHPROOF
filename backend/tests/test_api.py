@@ -93,5 +93,6 @@ def test_draft_pr_creation_api():
     assert success_resp.status_code == 200
     pr_data = success_resp.json()
     assert pr_data["success"] is True
-    assert pr_data["draft_status"] == "DRAFT"
+    assert "DRAFT" in pr_data["draft_status"]
     assert "never automatically merge" in pr_data["safety_notice"]
+

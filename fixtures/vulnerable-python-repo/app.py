@@ -7,3 +7,4 @@ def fetch_data(url: str):
 
 def parse_config(content: str):
     return yaml.load(content, Loader=yaml.FullLoader)
+

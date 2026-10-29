@@ -116,3 +116,4 @@ class RepositoryService:
         """Safely cleans up temporary clone directory."""
         if repo_path and repo_path.exists() and str(TEMP_DIR) in str(repo_path):
             shutil.rmtree(repo_path, ignore_errors=True)
+

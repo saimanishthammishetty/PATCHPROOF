@@ -32,3 +32,4 @@ def test_redact_secret_string_utility():
     assert masked.startswith("ghp_")
     assert masked.endswith("cdef")
     assert "*" in masked
+
