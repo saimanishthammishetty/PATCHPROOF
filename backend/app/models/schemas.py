@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 class AnalysisRequest(BaseModel):
     repo_url: str = Field(..., description="Target repository URL (e.g. https://github.com/owner/repo or fixture://vulnerable-python)")
@@ -75,6 +75,7 @@ class RemediationProposal(BaseModel):
     original_content: str
     modified_content: str
     diff: str
+    manifest_diff: Optional[str] = None  # Alias for backward compatibility
     verification_status: str # "Verified compatible", "Tests recommended", "No verified remediation found"
 
 class DraftPRRequest(BaseModel):
@@ -83,7 +84,7 @@ class DraftPRRequest(BaseModel):
     base_branch: str = "main"
     proposed_branch: Optional[str] = None
     pr_title: str
-    pr_body: str
+    pr_body: str = Field(default="", description="Optional human description or automated summary")
     user_confirmed: bool = Field(..., description="Explicit human authorization confirmation")
 
 class DraftPRResponse(BaseModel):
@@ -142,4 +143,38 @@ class DemoRepositoryInfo(BaseModel):
     ecosystem: str
     description: str
     expected_findings: str
+
+class CodeDebugRequest(BaseModel):
+    code: str = Field(..., description="Source code snippet to analyze")
+    language: str = Field(..., description="Programming language (e.g. python, javascript, c, java, go)")
+
+class CodeDebugResponse(BaseModel):
+    issue_detected: bool
+    predicted_category: str
+    category_label: str
+    confidence_score: float
+    severity: str
+    faulty_line_number: Optional[int] = None
+    faulty_line_content: Optional[str] = None
+    suggested_fix: Optional[str] = None
+    diff: Optional[str] = None
+    explanation: str
+    limitations_notice: str
+    supported_languages: List[str] = Field(default_factory=lambda: ["python", "javascript", "c", "cpp", "java", "go", "typescript"])
+
+    # Backward-compatible integration fields
+    detected_archetype: Optional[str] = None
+    confidence: Optional[float] = None
+    proposed_fixes: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def sync_compatibility_fields(self) -> "CodeDebugResponse":
+        if self.detected_archetype is None:
+            self.detected_archetype = self.predicted_category
+        if self.confidence is None:
+            self.confidence = self.confidence_score
+        if not self.proposed_fixes and self.suggested_fix:
+            self.proposed_fixes = [self.suggested_fix]
+        return self
+
 

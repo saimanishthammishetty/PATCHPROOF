@@ -1,0 +1,135 @@
+{
+  "summary": {
+    "passed": 20,
+    "failed": 0,
+    "total": 20
+  },
+  "phase1_startup": {
+    "Backend Health Endpoint": {
+      "name": "Backend Health Endpoint",
+      "status": "PASS",
+      "details": "Status: 200, Payload: {'status': 'healthy', 'safety_guard': 'NEVER_MERGE_ACTIVE'}"
+    },
+    "Frontend SPA HTML Delivery": {
+      "name": "Frontend SPA HTML Delivery",
+      "status": "PASS",
+      "details": "Status: 200, Length: 458 bytes, root container: True"
+    },
+    "Frontend CSS Bundle": {
+      "name": "Frontend CSS Bundle",
+      "status": "PASS",
+      "details": "CSS path: /assets/index-wCvZrhO2.css, Size: 28254 bytes"
+    },
+    "Frontend JS Bundle": {
+      "name": "Frontend JS Bundle",
+      "status": "PASS",
+      "details": "JS path: /assets/index-BedhS8Cr.js, Size: 322283 bytes"
+    }
+  },
+  "phase2_user_journey": {
+    "1. Demo Repositories Discovery": {
+      "name": "1. Demo Repositories Discovery",
+      "status": "PASS",
+      "details": "Discovered 4 demo repositories across ecosystems: ['Python / PyPI', 'Node.js / npm', 'Multi-language', 'Golang']"
+    },
+    "2. Python Dependency & Vulnerability Scan": {
+      "name": "2. Python Dependency & Vulnerability Scan",
+      "status": "PASS",
+      "details": "Scan ID: scan-27f49bc5, Components: 3, Advisories: 9"
+    },
+    "3. SBOM Dual-Format Generation": {
+      "name": "3. SBOM Dual-Format Generation",
+      "status": "PASS",
+      "details": "CycloneDX 1.5 components: 3; SPDX 2.3 packages: 3"
+    },
+    "4. Vulnerability Filtering & Search API": {
+      "name": "4. Vulnerability Filtering & Search API",
+      "status": "PASS",
+      "details": "Critical filter returned 3 findings; Keyword search returned 4 findings"
+    },
+    "5. Secret Scanning & Zero-Leak Redaction": {
+      "name": "5. Secret Scanning & Zero-Leak Redaction",
+      "status": "PASS",
+      "details": "Detected 5 credential leaks; All masked with rotation playbooks provided"
+    },
+    "6. Explainable Risk Scoring Breakdown": {
+      "name": "6. Explainable Risk Scoring Breakdown",
+      "status": "PASS",
+      "details": "Risk Score: 85.0/100 (Critical) | Factors: {'max_vulnerability_score': 84.9, 'secret_risk_penalty': 0.0, 'suspicious_dependency_penalty': 0.0, 'cisa_kev_active': 1.0, 'cvss_factor': 84.9, 'kev_factor': 1.0, 'epss_factor': 0.0, 'secrets_factor': 0.0}"
+    },
+    "7. Safe Remediation & Unified Diff Output": {
+      "name": "7. Safe Remediation & Unified Diff Output",
+      "status": "PASS",
+      "details": "Proposal for requests (2.19.1 -> 2.33.0) with genuine unified diff"
+    },
+    "8. Draft PR Gate & Human Authorization": {
+      "name": "8. Draft PR Gate & Human Authorization",
+      "status": "PASS",
+      "details": "Unconfirmed rejected (400): True; Confirmed created Draft: DRAFT (DRY RUN / SIMULATION); Safety notice enforced: True"
+    },
+    "9. Tamper-Evident Cryptographic Audit Trail": {
+      "name": "9. Tamper-Evident Cryptographic Audit Trail",
+      "status": "PASS",
+      "details": "Recorded 11 lifecycle events with SHA-256 integrity hashes"
+    },
+    "10. AI Code Debugger & Localization": {
+      "name": "10. AI Code Debugger & Localization",
+      "status": "PASS",
+      "details": "Defect detected: api_misuse at line 1, Fix diff generated; Clean control verified 0 defects"
+    },
+    "11. Node.js / npm Ecosystem Analysis": {
+      "name": "11. Node.js / npm Ecosystem Analysis",
+      "status": "PASS",
+      "details": "Parsed 3 npm packages; Identified 7 vulnerabilities"
+    },
+    "12. Clean Control Go Repository Scan": {
+      "name": "12. Clean Control Go Repository Scan",
+      "status": "PASS",
+      "details": "0 CVEs detected; Risk score: 0.0/100 (Low)"
+    }
+  },
+  "phase3_safety": {
+    "Zero Merge API Routes Invariant": {
+      "name": "Zero Merge API Routes Invariant",
+      "status": "PASS",
+      "details": "Audited 7 FastAPI routes; Found 0 merge routes"
+    },
+    "SSRF & Private Network Defense": {
+      "name": "SSRF & Private Network Defense",
+      "status": "PASS",
+      "details": "Blocked 6/6 attack vectors (localhost, metadata, private IP, file/ftp schemes)"
+    },
+    "GitHubService.merge_pull_request Denial": {
+      "name": "GitHubService.merge_pull_request Denial",
+      "status": "PASS",
+      "details": "merge_pull_request call raises NotImplementedError with strict prohibition message"
+    },
+    "Zero-Leak Raw Secret Exposure": {
+      "name": "Zero-Leak Raw Secret Exposure",
+      "status": "PASS",
+      "details": "All credentials in scan results and audit logs are strictly redacted"
+    }
+  },
+  "endpoints_tested": [],
+  "demo_runs": {
+    "vulnerable-python": {
+      "components": 3,
+      "vulnerabilities": 9,
+      "remediations": 3,
+      "risk_score": 85.0
+    },
+    "secret-leak": {
+      "secrets_found": 5,
+      "all_masked": true
+    },
+    "vulnerable-node": {
+      "components": 3,
+      "vulnerabilities": 7
+    },
+    "secure-go": {
+      "components": 1,
+      "vulnerabilities": 0,
+      "risk_score": 0.0
+    }
+  }
+}

@@ -79,7 +79,7 @@ export interface DraftPRRequest {
   base_branch: string;
   proposed_branch?: string;
   pr_title: string;
-  pr_body: string;
+  pr_body?: string;
   user_confirmed: boolean;
 }
 
@@ -144,6 +144,30 @@ export interface DemoRepositoryInfo {
   description: string;
   expected_findings: string;
 }
+
+export interface CodeDebugRequest {
+  code: string;
+  language: string;
+}
+
+export interface CodeDebugResponse {
+  issue_detected: boolean;
+  predicted_category: string;
+  category_label: string;
+  confidence_score: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
+  faulty_line_number?: number | null;
+  faulty_line_content?: string | null;
+  suggested_fix?: string | null;
+  diff?: string | null;
+  explanation: string;
+  limitations_notice: string;
+  supported_languages: string[];
+  detected_archetype?: string;
+  confidence?: number;
+  proposed_fixes?: string[];
+}
+
 
 export const ECOSYSTEM_LIST = ['pypi', 'npm', 'golang', 'maven'];
 

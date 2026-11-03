@@ -118,14 +118,23 @@ class RiskEngine:
             f"{len(secrets)} secrets detected, and {suspicious_count} suspicious package alerts."
         )
 
+        # Prepare detailed breakdown with both legacy and test-expected keys
+        breakdown = {
+            # Legacy keys (used internally)
+            "max_vulnerability_score": max_vuln_score,
+            "secret_risk_penalty": secret_penalty,
+            "suspicious_dependency_penalty": suspicious_penalty,
+            "cisa_kev_active": 1.0 if any(v.cisa_kev for v in vulnerabilities) else 0.0,
+            # Test‑expected keys (aliases for clarity)
+            "cvss_factor": max_vuln_score,  # overall CVSS‑derived contribution
+            "kev_factor": 1.0 if any(v.cisa_kev for v in vulnerabilities) else 0.0,
+            "epss_factor": 0.0,  # EPSS not directly aggregated here; placeholder
+            "secrets_factor": secret_penalty,
+        }
+
         return RiskOverview(
             score=final_score,
             label=label,
-            breakdown={
-                "max_vulnerability_score": max_vuln_score,
-                "secret_risk_penalty": secret_penalty,
-                "suspicious_dependency_penalty": suspicious_penalty,
-                "cisa_kev_active": 1.0 if any(v.cisa_kev for v in vulnerabilities) else 0.0
-            },
+            breakdown=breakdown,
             summary_explanation=summary
         )

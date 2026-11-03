@@ -20,7 +20,17 @@ pnpm-debug.log*
 .env
 .env.local
 
-# Temp Repositories
+# Temp Repositories & Local Caches
 /temp/
 *.tmp
+.pytest_temp/
+backups/
+
+# ML Datasets & Model Artifacts
+/data/
+/models/
+*.jsonl
+*.joblib
+*.pkl
+
 

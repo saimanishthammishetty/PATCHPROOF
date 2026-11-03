@@ -1,12 +1,19 @@
 import React from 'react';
-import { Shield, Lock, Terminal, Activity, FileCheck2 } from 'lucide-react';
+import { Shield, Lock, Terminal, Activity, FileCheck2, Bug, Layers } from 'lucide-react';
 
 interface NavbarProps {
   onNewScan: () => void;
   hasActiveAnalysis: boolean;
+  activeMode: 'scanner' | 'debugger';
+  onSelectMode: (mode: 'scanner' | 'debugger') => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onNewScan, hasActiveAnalysis }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  onNewScan, 
+  hasActiveAnalysis,
+  activeMode,
+  onSelectMode
+}) => {
   return (
     <header className="border-b border-surface-elevated bg-background/90 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5 transition-all">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -30,13 +37,32 @@ export const Navbar: React.FC<NavbarProps> = ({ onNewScan, hasActiveAnalysis }) 
           </div>
         </div>
 
-        {/* Center Ecosystem Support Badges */}
-        <div className="hidden lg:flex items-center space-x-2 bg-surface/80 border border-surface-elevated px-3 py-1.5 rounded-full text-xs text-text-secondary">
-          <span className="text-[11px] font-semibold text-text-secondary/70 uppercase tracking-wider mr-1">Ecosystems:</span>
-          <span className="px-2 py-0.5 rounded-full bg-surface-elevated text-text-primary font-mono text-[11px]">PyPI</span>
-          <span className="px-2 py-0.5 rounded-full bg-surface-elevated text-text-primary font-mono text-[11px]">npm</span>
-          <span className="px-2 py-0.5 rounded-full bg-surface-elevated text-text-primary font-mono text-[11px]">Go</span>
-          <span className="px-2 py-0.5 rounded-full bg-surface-elevated text-text-primary font-mono text-[11px]">Maven</span>
+        {/* Center Mode Switcher Tabs */}
+        <div className="flex items-center space-x-1.5 bg-surface/90 border border-surface-elevated p-1 rounded-xl text-xs font-mono">
+          <button
+            onClick={() => onSelectMode('scanner')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              activeMode === 'scanner'
+                ? 'bg-surface-elevated text-brand-cyan font-bold border border-brand-cyan/40 shadow-sm'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Supply Chain Scanner</span>
+          </button>
+
+          <button
+            onClick={() => onSelectMode('debugger')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              activeMode === 'debugger'
+                ? 'bg-surface-elevated text-brand-violet font-bold border border-brand-violet/40 shadow-sm'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            <span>AI Code Debugger</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse"></span>
+          </button>
         </div>
 
         {/* Status Guard Indicator & Actions */}
@@ -63,4 +89,5 @@ export const Navbar: React.FC<NavbarProps> = ({ onNewScan, hasActiveAnalysis }) 
     </header>
   );
 };
+
 

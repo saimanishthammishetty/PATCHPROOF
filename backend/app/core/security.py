@@ -7,7 +7,7 @@ from typing import Tuple, List, Dict, Any
 SECRET_PATTERNS: Dict[str, re.Pattern] = {
     "AWS Access Key ID": re.compile(r"\b(AKIA[0-9A-Z]{16})\b"),
     "AWS Secret Access Key": re.compile(r"(?i)\baws_secret_access_key\s*=\s*([A-Za-z0-9/+=]{40})\b"),
-    "GitHub Personal Access Token": re.compile(r"\b(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82})\b"),
+    "GitHub Personal Access Token": re.compile(r"\b(ghp_[A-Za-z0-9]{20,40}|github_pat_[A-Za-z0-9_]{82})\b"),
     "GitHub OAuth Token": re.compile(r"\b(gho_[A-Za-z0-9]{36})\b"),
     "Slack Bot Token": re.compile(r"\b(xoxb-[0-9]{11,13}-[0-9]{11,13}-[A-Za-z0-9]{24})\b"),
     "Slack User Token": re.compile(r"\b(xoxp-[0-9]{11,13}-[0-9]{11,13}-[A-Za-z0-9]{24})\b"),
@@ -42,6 +42,38 @@ def redact_secret_string(val: str, visible_prefix: int = 4, visible_suffix: int 
     suffix = val_str[-visible_suffix:]
     mask_length = max(6, length - (visible_prefix + visible_suffix))
     return f"{prefix}{'*' * mask_length}{suffix}"
+
+
+def redact_secrets_in_content(content: str) -> str:
+    """Redact credential matches without altering surrounding text."""
+    if not content:
+        return ""
+
+    sanitized = str(content)
+
+    # Redact complete PEM private-key blocks.
+    pem = re.compile(
+        r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+        r".*?"
+        r"-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+        re.DOTALL,
+    )
+    sanitized = pem.sub("[REDACTED PRIVATE KEY]", sanitized)
+
+    for name, pattern in SECRET_PATTERNS.items():
+        if name == "RSA / Private Key Block":
+            continue
+
+        def replace_match(match):
+            token = match.group(1) if match.groups() else match.group(0)
+            return match.group(0).replace(
+                token, redact_secret_string(token), 1
+            )
+
+        sanitized = pattern.sub(replace_match, sanitized)
+
+    return sanitized
+
 
 def validate_repository_url(url: str) -> Tuple[bool, str]:
     """

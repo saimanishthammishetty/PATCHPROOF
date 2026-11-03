@@ -13,9 +13,10 @@ import { RiskEngineTab } from './components/RiskEngineTab';
 import { RemediationTab } from './components/RemediationTab';
 import { DraftPRModal } from './components/DraftPRModal';
 import { AuditTab } from './components/AuditTab';
+import { DebuggerTab } from './components/DebuggerTab';
 import { 
   Shield, Terminal, Search, ArrowRight, Loader2, Sparkles, 
-  CheckCircle, Lock, Bug, KeyRound, Layers, Wrench, History, Cpu, AlertTriangle
+  CheckCircle, Lock, Bug, KeyRound, Layers, Wrench, History, Cpu, AlertTriangle, Code2
 } from 'lucide-react';
 
 export function App() {
@@ -25,8 +26,9 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const [appMode, setAppMode] = useState<'scanner' | 'debugger'>('scanner');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sbom' | 'vulnerabilities' | 'secrets' | 'risk' | 'remediation' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sbom' | 'vulnerabilities' | 'secrets' | 'risk' | 'remediation' | 'audit' | 'debugger'>('dashboard');
   const [activeDraftProposal, setActiveDraftProposal] = useState<RemediationProposal | null>(null);
 
   useEffect(() => {
@@ -78,10 +80,17 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-background text-text-primary flex flex-col font-sans selection:bg-brand-violet/30 selection:text-brand-cyan">
-      <Navbar onNewScan={handleResetScan} hasActiveAnalysis={!!analysisResult} />
+      <Navbar 
+        onNewScan={handleResetScan} 
+        hasActiveAnalysis={!!analysisResult}
+        activeMode={appMode}
+        onSelectMode={(mode) => setAppMode(mode)}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
-        {!analysisResult ? (
+        {appMode === 'debugger' ? (
+          <DebuggerTab />
+        ) : !analysisResult ? (
           /* ============================================================ */
           /* LANDING SCREEN / REPOSITORY INPUT */
           /* ============================================================ */
@@ -322,6 +331,18 @@ export function App() {
                 <History className="w-4 h-4" />
                 <span>Audit Trail ({analysisResult.audit_logs.length})</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab('debugger')}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'debugger'
+                    ? 'bg-surface-elevated text-brand-violet border border-brand-violet/40 shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                }`}
+              >
+                <Code2 className="w-4 h-4 text-brand-cyan" />
+                <span>Code Debugger</span>
+              </button>
             </div>
 
             {/* Active Tab View */}
@@ -348,6 +369,9 @@ export function App() {
             )}
             {activeTab === 'audit' && (
               <AuditTab logs={analysisResult.audit_logs} />
+            )}
+            {activeTab === 'debugger' && (
+              <DebuggerTab />
             )}
 
             {/* Draft PR Review Modal */}

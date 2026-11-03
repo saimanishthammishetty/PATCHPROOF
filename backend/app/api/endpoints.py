@@ -7,7 +7,7 @@ from app.models.schemas import (
     AnalysisRequest, AnalysisResult, Component, VulnerabilityFinding,
     SecretFinding, DependencyHealthFinding, RemediationProposal,
     DraftPRRequest, DraftPRResponse, AuditEntry, RiskOverview,
-    DemoRepositoryInfo
+    DemoRepositoryInfo, CodeDebugRequest, CodeDebugResponse
 )
 from app.services.repository_service import RepositoryService
 from app.services.dependency_parser import DependencyParser
@@ -19,6 +19,7 @@ from app.services.risk_engine import RiskEngine
 from app.services.remediation_service import RemediationService
 from app.services.github_service import GitHubService
 from app.services.audit_service import audit_logger
+from app.services.debug_service import DebugService
 
 router = APIRouter(prefix="/api", tags=["Analyses"])
 
@@ -318,3 +319,20 @@ def get_audit_trail(analysis_id: str):
     if analysis_id not in ANALYSES_STORE:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return audit_logger.get_logs()
+
+@router.post("/debug/analyze", response_model=CodeDebugResponse)
+def analyze_code_snippet(request: CodeDebugRequest):
+    """
+    Analyzes a source code snippet using the trained archetype classifier
+    and performs validated defect localization and fix generation.
+    Strictly static analysis; no user code is executed.
+    """
+    try:
+        return DebugService.analyze_code(request)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=f"ML debugging engine unavailable: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+

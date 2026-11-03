@@ -1,4 +1,7 @@
-import type { AnalysisResult, DemoRepositoryInfo, DraftPRRequest, DraftPRResponse, AuditEntry } from '../types';
+import type { 
+  AnalysisResult, DemoRepositoryInfo, DraftPRRequest, 
+  DraftPRResponse, AuditEntry, CodeDebugResponse 
+} from '../types';
 
 const API_BASE = '/api';
 
@@ -69,3 +72,19 @@ export async function getAuditLogs(analysisId: string): Promise<AuditEntry[]> {
   if (!res.ok) throw new Error('Failed to load audit trail');
   return res.json();
 }
+
+export async function analyzeCodeSnippet(code: string, language: string): Promise<CodeDebugResponse> {
+  const res = await fetch(`${API_BASE}/debug/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, language })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Code debugging analysis failed');
+  }
+
+  return res.json();
+}
+

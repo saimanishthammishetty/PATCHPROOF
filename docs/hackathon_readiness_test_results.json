@@ -1,0 +1,76 @@
+{
+  "passed": 14,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "API Startup & Health Check",
+      "status": "PASS",
+      "details": "Status: 200, Payload: {'status': 'healthy', 'safety_guard': 'NEVER_MERGE_ACTIVE'}"
+    },
+    {
+      "name": "Demo Repositories Discovery",
+      "status": "PASS",
+      "details": "Found 4 demo repositories"
+    },
+    {
+      "name": "Python Repository & Dependency Parsing",
+      "status": "PASS",
+      "details": "Parsed 3 components from requirements.txt"
+    },
+    {
+      "name": "SBOM Export (CycloneDX 1.5 & SPDX 2.3)",
+      "status": "PASS",
+      "details": "CycloneDX components: 3, SPDX packages: 3"
+    },
+    {
+      "name": "Vulnerability Detection & Threat Enrichment",
+      "status": "PASS",
+      "details": "Identified 9 advisories (Critical: True, CISA KEV: True)"
+    },
+    {
+      "name": "Secret Scanner & Zero-Leak Redaction",
+      "status": "PASS",
+      "details": "Found 5 secrets; all strictly redacted with rotation playbooks"
+    },
+    {
+      "name": "Deterministic Explainable Risk Engine",
+      "status": "PASS",
+      "details": "Score: 85.0/100 (Critical) with mathematical factor breakdown"
+    },
+    {
+      "name": "Automated Safe Remediation Planning",
+      "status": "PASS",
+      "details": "Generated proposal for requests (2.19.1 -> 2.33.0) with unified diff"
+    },
+    {
+      "name": "Human-Reviewed Draft PR Creation Gate",
+      "status": "PASS",
+      "details": "Unconfirmed rejected (400): True; Confirmed created Draft: DRAFT (DRY RUN / SIMULATION)"
+    },
+    {
+      "name": "Tamper-Evident SHA-256 Audit Trail",
+      "status": "PASS",
+      "details": "Recorded 11 lifecycle events with verified 256-bit cryptographic hashes"
+    },
+    {
+      "name": "ML-Assisted Code Debugger Inference",
+      "status": "PASS",
+      "details": "Detected archetype: api_misuse, Confidence: 85.0%, Proposed fix diff generated"
+    },
+    {
+      "name": "SSRF & Auto-Merge Security Architecture",
+      "status": "PASS",
+      "details": "Blocked 5/5 SSRF attack vectors; Prohibited merge guard active"
+    },
+    {
+      "name": "Node.js / npm Ecosystem Analysis",
+      "status": "PASS",
+      "details": "Parsed 3 npm packages; Found 7 vulnerabilities"
+    },
+    {
+      "name": "Hardened Clean Repository Control",
+      "status": "PASS",
+      "details": "0 CVEs detected; Risk Score: 0.0/100 (Low)"
+    }
+  ]
+}

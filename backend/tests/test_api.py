@@ -96,3 +96,51 @@ def test_draft_pr_creation_api():
     assert "DRAFT" in pr_data["draft_status"]
     assert "never automatically merge" in pr_data["safety_notice"]
 
+def test_draft_pr_omitted_body_authorization_gate():
+    """
+    Regression test for ISS-01:
+    Omitting optional pr_body must not trigger HTTP 422 validation failure;
+    unconfirmed requests must reach authorization gate and return HTTP 400.
+    Confirmed requests must succeed and produce a DRAFT PR.
+    Missing required fields (e.g. analysis_id) must still return HTTP 422.
+    """
+    analysis_resp = client.post("/api/analyses", json={"repo_url": "fixture://vulnerable-python-repo"})
+    analysis_data = analysis_resp.json()
+    analysis_id = analysis_data["id"]
+    remediation = analysis_data["remediations"][0]
+
+    # 1. Unconfirmed request with omitted pr_body -> must return 400 (not 422)
+    unconf_payload = {
+        "analysis_id": analysis_id,
+        "remediation_id": remediation["id"],
+        "base_branch": "main",
+        "pr_title": "Fix vulnerability",
+        "user_confirmed": False
+    }
+    unconf_resp = client.post(f"/api/analyses/{analysis_id}/draft-pr", json=unconf_payload)
+    assert unconf_resp.status_code == 400, f"Expected 400, got {unconf_resp.status_code}: {unconf_resp.text}"
+    assert "user confirmation is mandatory" in unconf_resp.json()["detail"].lower()
+
+    # 2. Confirmed request with omitted pr_body -> must succeed as DRAFT
+    conf_payload = {
+        "analysis_id": analysis_id,
+        "remediation_id": remediation["id"],
+        "base_branch": "main",
+        "pr_title": f"Upgrade {remediation['package']}",
+        "user_confirmed": True
+    }
+    conf_resp = client.post(f"/api/analyses/{analysis_id}/draft-pr", json=conf_payload)
+    assert conf_resp.status_code == 200
+    pr_data = conf_resp.json()
+    assert pr_data["success"] is True
+    assert "DRAFT" in pr_data["draft_status"]
+
+    # 3. Missing required field (e.g. user_confirmed omitted) -> must fail HTTP 422
+    invalid_payload = {
+        "analysis_id": analysis_id,
+        "remediation_id": remediation["id"],
+        "pr_title": "Missing confirmed"
+    }
+    invalid_resp = client.post(f"/api/analyses/{analysis_id}/draft-pr", json=invalid_payload)
+    assert invalid_resp.status_code == 422
+
