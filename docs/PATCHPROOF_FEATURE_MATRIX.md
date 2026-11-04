@@ -1,0 +1,76 @@
+# PATCHPROOF — Feature Implementation & Evidence Matrix
+
+**Audit Date:** November 4, 2026  
+**Audited Baseline:** `C:\PATCHPROOF`  
+**Safety Invariant:** `NEVER_MERGE_ACTIVE = True` (Permanent Architectural Invariant)  
+**Trained ML Model:** `models/bug_detector.joblib` (SHA-256: `5F93BBA9CE457FE991580AFCD3C482D2D8FB626C019AB1DCDA58B73731176A20`)
+
+---
+
+## 1. Status Taxonomy Definitions
+
+- **`IMPLEMENTED AND TESTED`**: Feature is completely coded in the backend or frontend and verified by passing automated tests in `backend/tests/`, `test_hackathon_readiness.py`, or `scratch/e2e_validator.py`.
+- **`IMPLEMENTED BUT NOT FULLY TESTED`**: Feature code exists in the codebase but lacks an automated unit or integration test verifying all edge cases (e.g. XML pom.xml parsing, live GitHub API token calls).
+- **`SIMULATED`**: Feature deliberately emulates external network/cloud behavior (such as external GitHub pull request creation when `GITHUB_TOKEN` is unset) as an intentional safety control.
+- **`PLANNED`**: Architectural capability designed for future milestones; not present in the current production baseline.
+
+---
+
+## 2. Complete Capability Matrix
+
+| Feature / Capability | Implementation Status | Source Implementation | Test / Verification Evidence | Input | Output | Technologies & Algorithms | Known Limitations |
+| :--- | :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Repository Ingestion & Discovery** | `IMPLEMENTED AND TESTED` | `backend/app/services/repository_service.py:12-76` | `test_hackathon_readiness.py:Test 1-3`, `backend/tests/test_api.py:test_start_analysis_and_results` | GitHub URL or `fixture://*` URI | Cloned directory & commit SHA | Git CLI (`git clone --depth 1`), Python `pathlib`, `hashlib.sha256` | 45s shallow clone timeout; private repos require SSH/PAT setup. |
+| **Python Dependency Parsing** | `IMPLEMENTED AND TESTED` | `backend/app/services/dependency_parser.py:58-161` | `backend/tests/test_dependency_parser.py:test_python_requirements_parsing` | `requirements*.txt`, `pyproject.toml`, `poetry.lock` | List of PyPI `Component` models | Regular expressions, TOML parser | Dynamic `setup.py` code execution is not evaluated. |
+| **Node.js Dependency Parsing** | `IMPLEMENTED AND TESTED` | `backend/app/services/dependency_parser.py:163-238` | `backend/tests/test_dependency_parser.py:test_node_package_parsing` | `package.json`, `package-lock.json` | List of npm `Component` models | JSON parser; lockfile v1/v2/v3 depth resolver | pnpm and yarn lockfiles are not parsed. |
+| **Golang Dependency Parsing** | `IMPLEMENTED AND TESTED` | `backend/app/services/dependency_parser.py:240-268` | `backend/tests/test_dependency_parser.py:test_go_mod_parsing`, `test_hackathon_readiness.py:Test 14` | `go.mod` | List of Go `Component` models | Go module grammar tokenizer | `go.sum` checksum validation is not performed. |
+| **Java Maven Dependency Parsing** | `IMPLEMENTED BUT NOT FULLY TESTED` | `backend/app/services/dependency_parser.py:270-313` | Manual fixture verification | `pom.xml` | List of Maven `Component` models | Python `xml.etree.ElementTree` | Parent POM inheritance and remote repository lookups are not supported. |
+| **Direct vs. Transitive Resolution** | `IMPLEMENTED AND TESTED` | `backend/app/services/dependency_parser.py:10-56` | `test_hackathon_readiness.py:Test 3`, `backend/tests/test_dependency_parser.py` | Parsed manifests & lockfiles | `direct: true/false` flag | Lockfile depth parsing, `// indirect` Go parsing | Deep npm v1 transitive trees use heuristic mapping. |
+| **CycloneDX 1.5 JSON SBOM Export** | `IMPLEMENTED AND TESTED` | `backend/app/services/sbom_service.py:9-77` | `test_hackathon_readiness.py:Test 4`, `validate_sbom.py` | `List[Component]`, repo metadata | CycloneDX 1.5 JSON attachment | CycloneDX 1.5 JSON Schema, PURL spec (`rfc`), UUID v4 | Does not compute tarball package hashes (SHA-256). |
+| **SPDX 2.3 JSON SBOM Export** | `IMPLEMENTED AND TESTED` | `backend/app/services/sbom_service.py:79-125` | `test_hackathon_readiness.py:Test 4`, `validate_sbom.py` | `List[Component]`, repo metadata | SPDX 2.3 JSON attachment | SPDX 2.3 JSON spec, `CC0-1.0` data license | Package download locations are set to `NOASSERTION`. |
+| **OSV.dev Vulnerability Correlation** | `IMPLEMENTED AND TESTED` | `backend/app/services/vulnerability_service.py:108-220` | `backend/tests/test_vulnerability_service.py:test_osv_batch_query_and_deduplication` | `List[Component]` | List of `VulnerabilityFinding` | Google OSV.dev batch API (`/v1/querybatch`), `httpx` client | 5s HTTP timeout; falls back to local cache if network is unavailable. |
+| **Semver Range Evaluation** | `IMPLEMENTED AND TESTED` | `backend/app/services/vulnerability_service.py:94-106` | `backend/tests/test_safety_guarantees.py:test_version_boundary_matching_prevents_false_positives` | Package version & advisory range | Boolean affected status | `packaging.version.parse` (PEP 440 & semver) | Non-standard git commit tags fall back to string equality. |
+| **CISA KEV Threat Intelligence** | `IMPLEMENTED AND TESTED` | `backend/app/services/vulnerability_service.py:9-14` | `test_hackathon_readiness.py:Test 5`, `backend/tests/test_risk_engine.py:test_cisa_kev_scoring_override` | CVE alias | `cisa_kev: true/false` & critical floor | US CISA Known Exploited Vulnerabilities catalog matching | Synchronized against curated KEV snapshot. |
+| **EPSS Exploit Prediction** | `IMPLEMENTED AND TESTED` | `backend/app/services/vulnerability_service.py:18-89` | `test_hackathon_readiness.py:Test 5` | CVE alias / Package | `epss_probability` float (0.0 to 1.0) | FIRST.org EPSS statistical probability scoring | Relies on advisory enrichment and heuristic fallback bounds. |
+| **Vulnerability Filtering & Search** | `IMPLEMENTED AND TESTED` | `backend/app/api/endpoints.py:270-281`, `frontend/src/components/VulnerabilitiesTab.tsx:20-35` | `scratch/e2e_validator.py:Check 4` | Severity query & search keyword | Filtered array of `VulnerabilityFinding` | React state filtering & FastAPI query parameter filter | Matches package name and CVE identifier aliases. |
+| **Working Tree Secret Scanning** | `IMPLEMENTED AND TESTED` | `backend/app/services/secret_scanner.py:31-78` | `backend/tests/test_secret_scanner.py:test_secret_detection_and_rotation_playbooks` | Repository directory path | Array of `SecretFinding` | 12 regex patterns (`security.py:7-20`), Shannon entropy | Evaluates text files under 1MB; skips binary formats. |
+| **Git Commit History Secret Scanning**| `IMPLEMENTED AND TESTED` | `backend/app/services/secret_scanner.py:79-121` | `test_hackathon_readiness.py:Test 6`, `scratch/e2e_validator.py:Check 5` | Repository `.git` directory | Historical commit leak findings | `git log -p -n 10 --unified=0` patch inspection | Inspects the last 10 historical commits by default. |
+| **Zero-Leak Secret Redaction** | `IMPLEMENTED AND TESTED` | `backend/app/core/security.py:27-76` | `backend/tests/test_secret_scanner.py:test_redact_secret_string_utility`, `test_safety_guarantees.py:test_remediation_diff_sanitizes_secrets` | Raw string or manifest content | Masked token string (e.g. `AKIA****************`) | Pattern substitution preserving 4-char prefix/suffix | Tokens <= 6 characters are fully masked (`******`). |
+| **Credential Rotation Playbooks** | `IMPLEMENTED AND TESTED` | `backend/app/services/secret_scanner.py:8-20` | `backend/tests/test_secret_scanner.py:test_secret_detection_and_rotation_playbooks` | Detected secret type | Step-by-step remediation guide | Curated vendor rotation playbook mapping | Does not execute remote revocation via cloud APIs. |
+| **Typosquatting Detection** | `IMPLEMENTED AND TESTED` | `backend/app/services/dependency_health.py:18-35, 69-82` | `test_hackathon_readiness.py:Test 7` | Component name & ecosystem | `DependencyHealthFinding` with warning | Levenshtein edit distance matrix against popular packages | Flags edit distance <= 2 against curated list of popular packages. |
+| **Lifecycle Script Inspection** | `IMPLEMENTED AND TESTED` | `backend/app/services/dependency_health.py:41-55, 83-91` | `backend/tests/test_dependency_parser.py` | `package.json` scripts block | High-risk script warnings | Regex search for `curl`, `wget`, `powershell`, `nc`, `bash -i` | Static syntax inspection; does not execute scripts. |
+| **Deterministic Risk Engine** | `IMPLEMENTED AND TESTED` | `backend/app/services/risk_engine.py:21-105` | `backend/tests/test_risk_engine.py`, `test_hackathon_readiness.py:Test 7` | Aggregated findings & components | 0 to 100 risk score & factor breakdown | Multi-factor weighted formula with KEV overrides | Static weights (35/25/20/10/10) cannot be altered via UI. |
+| **Safe Remediation Planning** | `IMPLEMENTED AND TESTED` | `backend/app/services/remediation_service.py:21-140` | `backend/tests/test_remediation_diff.py:test_successful_update_produces_unified_diff` | Vulnerabilities & Components | `RemediationProposal` with target version | Semver comparison, breaking change detector | Does not regenerate compiled lockfiles (`package-lock.json`). |
+| **Manifest Unified Diff Generation** | `IMPLEMENTED AND TESTED` | `backend/app/services/remediation_service.py:141-285` | `backend/tests/test_remediation_diff.py:test_remediation_diff_header_format` | Manifest text & proposed version | Genuine unified diff with `---`/`+++` | Python `difflib.unified_diff`, `redact_secrets_in_content` | Supports `requirements.txt`, `package.json`, and `go.mod`. |
+| **Human Authorization Gate** | `IMPLEMENTED AND TESTED` | `backend/app/api/endpoints.py:297-299`, `frontend/src/components/DraftPRModal.tsx:37-40` | `backend/tests/test_api.py:test_create_draft_pull_request_unconfirmed`, `test_draft_pr_omitted_body_authorization_gate` | `user_confirmed: bool` | Enables submit; returns 400 if False | Frontend disabled state, FastAPI HTTP 400 enforcement | Requires manual human checkbox interaction (by design). |
+| **GitHub DRAFT PR Creation (Live)** | `IMPLEMENTED BUT NOT FULLY TESTED` | `backend/app/services/github_service.py:61-97` | Manual staging verification | `GITHUB_TOKEN`, target repo, PR title | Live GitHub PR URL in draft mode | GitHub REST API v3 (`POST /repos/{owner}/{repo}/pulls`) | Requires active `GITHUB_TOKEN` and write permissions. |
+| **GitHub DRAFT PR (Demo Simulation)** | `SIMULATED` | `backend/app/services/github_service.py:108-121` | `test_hackathon_readiness.py:Test 9`, `backend/tests/test_safety_guarantees.py:test_simulation_mode_when_token_unset` | Demo fixture or token-less run | `DRAFT (DRY RUN / SIMULATION)` payload | In-memory response synthesis | Does not create remote pull requests (by design). |
+| **NEVER_MERGE Architectural Guard** | `IMPLEMENTED AND TESTED` | `backend/app/services/github_service.py:124-132`, `backend/app/core/config.py:19` | `backend/tests/test_safety_guarantees.py:test_github_service_never_merges`, `test_zero_merge_routes_in_api` | Invocations of merge functions | Unconditional `NotImplementedError` | Architectural route omission, runtime exception raise | Permanent system invariant; auto-merge cannot be enabled. |
+| **AI Defect Classification (13 Classes)**| `IMPLEMENTED AND TESTED` | `backend/app/services/debug_service.py:180-205` | `backend/tests/test_debug_api.py`, `test_hackathon_readiness.py:Test 11` | Source code string (up to 100k chars) | Predicted archetype & confidence float | scikit-learn TF-IDF + LogisticRegression (`bug_detector.joblib`)| Analyzes snippet/function level; requires model on disk. |
+| **Deterministic AST Line Localization** | `IMPLEMENTED AND TESTED` | `backend/app/services/debug_service.py:68-177` | `backend/tests/test_debug_api.py:test_debug_analyze_mutable_default` | Code string & predicted category | Faulty line number & line content | Python native `ast` module (`ast.walk`), JS/C regex analyzers | Supports specific syntax defect patterns (mutable defaults, etc.). |
+| **Code Patch Diff Synthesis** | `IMPLEMENTED AND TESTED` | `backend/app/services/debug_service.py:91-108, 247-255`| `test_hackathon_readiness.py:Test 11` | Defective code snippet | Unified diff (`original` vs `remediated`) | AST code transformer, Python `difflib.unified_diff` | Synthesizes fixes for supported syntactic defect archetypes. |
+| **Clean Code Control Verification** | `IMPLEMENTED AND TESTED` | `backend/app/services/debug_service.py:230-239` | `backend/tests/test_debug_api.py:test_debug_analyze_clean_code` | Bug-free code snippet | `Clean Code Control` badge, `INFO` severity | Calibrated 0.45 confidence floor guard | Unrecognized novel defect patterns classify as clean control. |
+| **Tamper-Evident SHA-256 Audit Trail** | `IMPLEMENTED AND TESTED` | `backend/app/services/audit_service.py:7-41` | `test_hackathon_readiness.py:Test 10` | Pipeline lifecycle events | Hashed `AuditEntry` records | Python `hashlib.sha256` hashing of event metadata | Stored in-memory for the duration of the server process. |
+| **SSRF & Host Blacklist Protection** | `IMPLEMENTED AND TESTED` | `backend/app/core/security.py:78-120` | `backend/tests/test_safety_guarantees.py:test_ssrf_blocking_localhost_and_private_ips` | Target repository URL | Rejection with HTTP 400 | Python `ipaddress` RFC 1918 validator, host blacklist | Blocks scanning internal Git hosts on private networks. |
+| **React 19 Frontend Dashboard** | `IMPLEMENTED AND TESTED` | `frontend/src/App.tsx`, `frontend/src/components/*` | Production build (`tsc && vite build`), live HTTP E2E tests | User clicks & inputs | Interactive dual-mode visual workspace | React 19, TypeScript, Tailwind CSS, Lucide React, Vite | Sub-tab bookmarking via browser URL history is in React state. |
+| **Whole-Program Taint Analysis** | `PLANNED` | None (Roadmap) | None | Complete enterprise codebase | Interprocedural call-graph reachability | Interprocedural control flow graph (CFG) analysis | Snippet/function scope in v1.0.0; multi-file taint planned. |
+| **Persistent Enterprise Ledger Storage**| `PLANNED` | None (Roadmap) | None | Audit log entries | External append-only database records | Amazon QLDB / Immutable SQL ledger integration | In-memory process storage in v1.0.0; persistent ledger planned. |
+
+---
+
+## 3. Capability Distribution Summary
+
+```
+========================================================================================
+                              FEATURE READINESS SUMMARY
+========================================================================================
+Status Category                Feature Count    Percentage    Verification Basis
+----------------------------------------------------------------------------------------
+IMPLEMENTED AND TESTED              30            85.7%       Verified via automated suites
+IMPLEMENTED BUT NOT FULLY TESTED     2             5.7%       pom.xml & live GitHub API
+SIMULATED                            1             2.9%       Dry-run Draft PR (safety design)
+PLANNED                              2             5.7%       Multi-file taint, QLDB ledger
+----------------------------------------------------------------------------------------
+TOTAL EVALUATED CAPABILITIES        35           100.0%       Zero Untracked Features
+========================================================================================
+```
