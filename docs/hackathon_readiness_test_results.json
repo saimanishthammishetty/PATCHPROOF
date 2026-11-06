@@ -25,7 +25,7 @@
     {
       "name": "Vulnerability Detection & Threat Enrichment",
       "status": "PASS",
-      "details": "Identified 9 advisories (Critical: True, CISA KEV: True)"
+      "details": "Identified 3 advisories (Critical: True, CVE mapped: True, Threat Intel verified: True)"
     },
     {
       "name": "Secret Scanner & Zero-Leak Redaction",
@@ -35,17 +35,17 @@
     {
       "name": "Deterministic Explainable Risk Engine",
       "status": "PASS",
-      "details": "Score: 85.0/100 (Critical) with mathematical factor breakdown"
+      "details": "Score: 78.0/100 (Critical) with mathematical factor breakdown"
     },
     {
       "name": "Automated Safe Remediation Planning",
       "status": "PASS",
-      "details": "Generated proposal for requests (2.19.1 -> 2.33.0) with unified diff"
+      "details": "Generated proposal for requests (2.19.1 -> 2.20.0) with unified diff"
     },
     {
       "name": "Human-Reviewed Draft PR Creation Gate",
       "status": "PASS",
-      "details": "Unconfirmed rejected (400): True; Confirmed created Draft: DRAFT (DRY RUN / SIMULATION)"
+      "details": "Unconfirmed rejected (400): True; Confirmed status: DRAFT (DRY RUN / SIMULATION) [Simulated Draft PR (Dry Run Preview)]"
     },
     {
       "name": "Tamper-Evident SHA-256 Audit Trail",
@@ -65,7 +65,7 @@
     {
       "name": "Node.js / npm Ecosystem Analysis",
       "status": "PASS",
-      "details": "Parsed 3 npm packages; Found 7 vulnerabilities"
+      "details": "Parsed 3 npm packages; Found 2 vulnerabilities"
     },
     {
       "name": "Hardened Clean Repository Control",

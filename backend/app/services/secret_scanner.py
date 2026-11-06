@@ -21,6 +21,90 @@ ROTATION_GUIDES = {
 
 class SecretScanner:
     @staticmethod
+    def classify_secret(raw_token: str, file_path: str, sec_name: str, line: str = "") -> dict:
+        norm_path = file_path.replace("\\", "/").lower()
+        parts = norm_path.split("/")
+        filename = parts[-1]
+
+        # Scope determination
+        if any(p in ("fixtures", "fixture") for p in parts[:-1]):
+            scope = "fixture"
+        elif any(p in ("tests", "test", "__tests__") for p in parts[:-1]) or filename.startswith("test_") or filename.endswith(("_test.py", ".spec.ts", ".test.js")):
+            scope = "test"
+        elif any(p in ("docs", "documentation") for p in parts[:-1]) or filename.endswith((".md", ".rst", ".adoc", ".txt")):
+            scope = "documentation"
+        else:
+            scope = "production"
+
+        token_lower = raw_token.lower()
+        line_lower = line.lower()
+
+        # Explicit known synthetic markers
+        is_known_synthetic = (
+            raw_token == "AKIAIOSFODNN7EXAMPLE"
+            or any(k in token_lower for k in ("example", "testdummy", "testsecret", "testsample", "faketoken", "dummytoken", "mocktoken", "samplekey", "placeholder", "changeme"))
+            or "1234567890abcdef" in token_lower
+            or "abcdef123456" in token_lower
+            or "0123456789" in token_lower
+            or "xxxxxx" in token_lower
+            or "00000000" in token_lower
+            or "11111111" in token_lower
+            or "# example:" in line_lower
+            or "// example:" in line_lower
+        )
+
+        clean_sec_name = sec_name.replace(" (Git History)", "")
+        rotation_guide = ROTATION_GUIDES.get(
+            clean_sec_name,
+            "Immediately revoke and rotate the secret. Update CI/CD secrets store and invalidate active credentials."
+        )
+
+        if is_known_synthetic:
+            is_synthetic = True
+            if scope == "test":
+                category = "Test credential"
+                reason = f"Explicit test placeholder token containing mock marker in {file_path}"
+                synth_reason = f"Test placeholder matching known dummy/mock pattern for {sec_name}"
+            elif scope == "documentation":
+                category = "Documentation example"
+                reason = f"Documentation placeholder matching known synthetic example pattern in {file_path}"
+                synth_reason = f"Synthetically constructed placeholder used in documentation for {sec_name}"
+            elif scope == "fixture":
+                category = "Synthetic/example credential"
+                reason = f"Test fixture placeholder token with synthetic marker in {file_path}"
+                synth_reason = f"Fixture example credential for {sec_name}"
+            else:
+                category = "Synthetic/example credential"
+                reason = f"Source code comment/docstring placeholder matching synthetic example pattern in {file_path}"
+                synth_reason = f"Synthetic placeholder matching recognized dummy pattern for {sec_name}"
+        else:
+            # Unknown or high-entropy credential
+            # Conservative treatment: NEVER classify as fake solely because it is in a test directory!
+            is_synthetic = False
+            synth_reason = None
+            if scope == "test":
+                category = "Potential real credential"
+                reason = f"High-entropy token detected in test file without placeholder markers; treated conservatively as potential real credential in {file_path}"
+            elif scope == "documentation":
+                category = "Potential real credential"
+                reason = f"High-entropy token detected in documentation without placeholder markers; treated conservatively in {file_path}"
+            elif scope == "fixture":
+                category = "Potential real credential"
+                reason = f"Credential detected in fixture without synthetic markers; treated conservatively in {file_path}"
+            else:
+                category = "Potential real credential"
+                reason = f"Active high-entropy credential discovered in repository codebase: {file_path}"
+
+        return {
+            "is_synthetic": is_synthetic,
+            "synthetic_reason": synth_reason,
+            "scope": scope,
+            "secret_category": category,
+            "classification_reason": reason,
+            "rotation_guidance": rotation_guide
+        }
+
+    @staticmethod
     def scan_repository(repo_path: Path, commit_sha: str = "HEAD") -> List[SecretFinding]:
         """
         Scans files in repository and git history commits for leaked secrets and credentials.
@@ -59,6 +143,7 @@ class SecretScanner:
                                 raw_token = match.group(1) if match.groups() else match.group(0)
                                 # Redact immediately - NEVER expose raw secret
                                 masked = redact_secret_string(raw_token)
+                                info = SecretScanner.classify_secret(raw_token, rel_path, sec_name, line)
                                 
                                 findings.append(SecretFinding(
                                     secret_type=sec_name,
@@ -68,10 +153,13 @@ class SecretScanner:
                                     detection_source="Pattern & High-Entropy Matcher",
                                     confidence="High",
                                     masked_value=masked,
-                                    remediation_instructions=ROTATION_GUIDES.get(
-                                        sec_name,
-                                        "Immediately revoke and rotate the secret. Update CI/CD secrets store."
-                                    )
+                                    remediation_instructions=info["rotation_guidance"],
+                                    is_synthetic=info["is_synthetic"],
+                                    synthetic_reason=info["synthetic_reason"],
+                                    scope=info["scope"],
+                                    secret_category=info["secret_category"],
+                                    classification_reason=info["classification_reason"],
+                                    rotation_guidance=info["rotation_guidance"]
                                 ))
                 except Exception:
                     continue
@@ -103,6 +191,7 @@ class SecretScanner:
                                     masked = redact_secret_string(raw_token)
                                     # Avoid duplicate findings for same file/secret
                                     if not any(f.masked_value == masked and f.file_path == current_file for f in findings):
+                                        info = SecretScanner.classify_secret(raw_token, current_file, sec_name, added_line)
                                         findings.append(SecretFinding(
                                             secret_type=f"{sec_name} (Git History)",
                                             file_path=current_file,
@@ -111,10 +200,13 @@ class SecretScanner:
                                             detection_source="Git Commit Log Scanner",
                                             confidence="High",
                                             masked_value=masked,
-                                            remediation_instructions=ROTATION_GUIDES.get(
-                                                sec_name,
-                                                "Secret was found in Git history. Purge commit with git-filter-repo or BFG and revoke the key immediately."
-                                            )
+                                            remediation_instructions=info["rotation_guidance"],
+                                            is_synthetic=info["is_synthetic"],
+                                            synthetic_reason=info["synthetic_reason"],
+                                            scope=info["scope"],
+                                            secret_category=info["secret_category"],
+                                            classification_reason=info["classification_reason"],
+                                            rotation_guidance=info["rotation_guidance"]
                                         ))
             except Exception:
                 pass

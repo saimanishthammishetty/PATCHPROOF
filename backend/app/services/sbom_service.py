@@ -53,7 +53,10 @@ class SBOMService:
                     {"name": "patchproof:ecosystem", "value": c.ecosystem},
                     {"name": "patchproof:direct", "value": str(c.direct).lower()},
                     {"name": "patchproof:manifest", "value": c.manifest_path},
-                    {"name": "patchproof:reachability", "value": c.reachability}
+                    {"name": "patchproof:reachability", "value": c.reachability},
+                    {"name": "patchproof:scope", "value": getattr(c, "scope", "production")},
+                    {"name": "patchproof:scope_reason", "value": getattr(c, "scope_reason", "") or ""},
+                    {"name": "patchproof:scope_confidence", "value": getattr(c, "scope_confidence", "High")}
                 ]
             }
             if c.license and c.license != "Unknown":
@@ -108,6 +111,7 @@ class SBOMService:
                 "filesAnalyzed": False,
                 "licenseConcluded": c.license or "NOASSERTION",
                 "licenseDeclared": c.license or "NOASSERTION",
+                "comment": f"Scope: {getattr(c, 'scope', 'production')}. Reason: {getattr(c, 'scope_reason', '') or ''}. Location: {c.manifest_path}:{getattr(c, 'line_number', 'unknown')}",
                 "externalRefs": [
                     {
                         "referenceCategory": "PACKAGE-MANAGER",

@@ -116,9 +116,12 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ data, onSelectTab })
               style={{ width: `${Math.min(100, Math.max(5, risk_overview.score))}%` }}
             />
           </div>
-          <p className="text-[11px] text-text-secondary mt-2.5 line-clamp-2 font-mono">
-            Deterministic formula factoring CVSS, CISA KEV weaponization, and reachability.
-          </p>
+          <div className="mt-2.5 pt-2 border-t border-surface-border flex items-center justify-between text-[11px] font-mono">
+            <span className="text-text-secondary">Production Risk:</span>
+            <span className="text-accent-emerald font-bold">
+              {risk_overview.production_score !== undefined ? `${risk_overview.production_score.toFixed(1)} / 100 (${risk_overview.production_label || 'Low'})` : '0.0 / 100 (Low)'}
+            </span>
+          </div>
         </div>
 
         {/* Components & SBOM */}
@@ -209,6 +212,11 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ data, onSelectTab })
               >
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
+                    {vuln.cve_id && (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-bold font-mono text-accent-emerald bg-accent-emerald/10 border border-accent-emerald/30">
+                        {vuln.cve_id}
+                      </span>
+                    )}
                     <span className="font-mono font-bold text-text-primary text-xs">{vuln.id}</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-severity-critical/20 text-severity-critical border border-severity-critical/30">
                       {vuln.severity}
@@ -219,11 +227,24 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ data, onSelectTab })
                         CISA KEV WEAPONIZED
                       </span>
                     )}
-                    {vuln.reachability === 'reachable' && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-elevated text-text-secondary border border-surface-border">
-                        Direct Application
+                    {(vuln.reachability === 'runtime_reachable' || vuln.reachability === 'reachable') && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-severity-critical/20 text-severity-critical border border-severity-critical/30">
+                        Runtime Reachable
                       </span>
                     )}
+                    {vuln.reachability === 'direct_dependency' && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-elevated text-text-secondary border border-surface-border">
+                        Direct Dependency
+                      </span>
+                    )}
+                    {vuln.reachability === 'transitive_dependency' && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-elevated text-text-muted border border-surface-border">
+                        Transitive Dependency
+                      </span>
+                    )}
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-elevated text-text-secondary border border-surface-border">
+                      Scope: {vuln.scope || 'production'}
+                    </span>
                   </div>
                   <p className="text-xs text-text-secondary line-clamp-1">{vuln.explanation}</p>
                   <p className="text-[11px] font-mono text-text-secondary">

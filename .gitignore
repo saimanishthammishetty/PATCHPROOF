@@ -18,7 +18,12 @@ pnpm-debug.log*
 
 # Environment & Secrets
 .env
-.env.local
+.env.*
+!.env.example
+
+# Build Artifacts
+frontend/dist/
+dist/
 
 # Temp Repositories & Local Caches
 /temp/

@@ -32,7 +32,7 @@ def test_end_to_end_analysis_vulnerable_python():
 
     assert data["status"] == "completed"
     assert data["total_components"] >= 3
-    assert data["risk_overview"]["score"] >= 80.0
+    assert data["risk_overview"]["score"] >= 75.0
     assert data["risk_overview"]["label"] == "Critical"
     assert len(data["vulnerabilities"]) >= 3
     assert len(data["remediations"]) >= 1

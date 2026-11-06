@@ -4,17 +4,24 @@ export interface Component {
   ecosystem: string;
   purl: string;
   direct: boolean;
-  license: string;
+  license?: string;
   manifest_path: string;
   reachability: 'reachable' | 'not_reachable' | 'unknown';
   vulnerability_count: number;
   risk_score: number;
   dependencies: string[];
+  scope?: 'production' | 'development' | 'test' | 'fixture' | 'unclassified' | string;
+  scope_reason?: string;
+  scope_confidence?: string;
+  line_number?: number;
+  manifest_snippet?: string;
 }
 
 export interface VulnerabilityFinding {
   id: string;
   aliases: string[];
+  cve_id?: string | null;
+  cve_ids?: string[];
   package: string;
   ecosystem: string;
   affected_version: string;
@@ -22,15 +29,26 @@ export interface VulnerabilityFinding {
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   cvss_score?: number;
   epss_probability?: number;
+  epss_percentile?: number | null;
+  epss_source?: string;
   cisa_kev: boolean;
+  cisa_kev_status?: string;
+  cisa_kev_date_added?: string | null;
+  threat_intel_source?: string | null;
   affected_range: string;
   source_links: string[];
   dependency_path: string[];
   reachability: string;
   recommended_action: string;
   explanation: string;
+  description?: string;
   confidence: string;
   confidence_reason: string;
+  scope?: 'production' | 'development' | 'test' | 'fixture' | 'unclassified' | string;
+  scope_reason?: string;
+  manifest_line?: number | null;
+  manifest_snippet?: string | null;
+  manifest_path?: string;
 }
 
 export interface SecretFinding {
@@ -42,6 +60,12 @@ export interface SecretFinding {
   confidence: string;
   masked_value: string;
   remediation_instructions: string;
+  is_synthetic?: boolean;
+  synthetic_reason?: string | null;
+  scope?: string;
+  secret_category?: string;
+  classification_reason?: string;
+  rotation_guidance?: string;
 }
 
 export interface DependencyHealthFinding {
@@ -87,9 +111,18 @@ export interface DraftPRResponse {
   success: boolean;
   draft_status: string;
   pr_url?: string;
+  pr_number?: number;
   branch_name: string;
+  base_branch?: string;
+  head_branch?: string;
+  commit_sha?: string;
+  changed_files?: string[];
+  repo_owner?: string;
+  repo_name?: string;
   title: string;
   message: string;
+  is_simulation?: boolean;
+  verified_on_github?: boolean;
   safety_notice: string;
 }
 
@@ -106,7 +139,9 @@ export interface AuditEntry {
 export interface RiskOverview {
   score: number;
   label: 'Critical' | 'High' | 'Medium' | 'Low';
-  breakdown: Record<string, number>;
+  production_score?: number;
+  production_label?: 'Critical' | 'High' | 'Medium' | 'Low' | string;
+  breakdown: Record<string, any>;
   summary_explanation: string;
 }
 

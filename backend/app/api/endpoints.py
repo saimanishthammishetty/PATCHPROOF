@@ -40,8 +40,8 @@ DEMO_REPOSITORIES: List[DemoRepositoryInfo] = [
         name="Vulnerable Python Microservice",
         url="fixture://vulnerable-python-repo",
         ecosystem="Python / PyPI",
-        description="Python repository with outdated requests 2.19.1 (CVE-2018-18074 in CISA KEV), urllib3 1.24.1, and PyYAML 5.2.",
-        expected_findings="3 Critical/High CVEs (1 in CISA KEV), 1 Safe Remediation proposal."
+        description="Python repository with outdated requests 2.19.1 (CVE-2018-18074), urllib3 1.24.1 (CVE-2019-11324), and PyYAML 5.2 (CVE-2020-14343).",
+        expected_findings="3 Critical/High CVEs (1 Critical PyYAML, High requests & urllib3), 1 Safe Remediation proposal."
     ),
     DemoRepositoryInfo(
         id="vulnerable-node",
@@ -315,13 +315,22 @@ def create_draft_pull_request(request: DraftPRRequest):
         request=request
     )
 
-    audit_logger.record_event(
-        event_type="DRAFT_PULL_REQUEST_CREATED",
-        repository=analysis.repo_name,
-        commit_sha=analysis.commit_sha,
-        details=f"Opened DRAFT pull request: '{resp.title}' at {resp.pr_url}. Action verified as DRAFT only.",
-        actor="Human Reviewer"
-    )
+    if resp.success:
+        audit_logger.record_event(
+            event_type="DRAFT_PULL_REQUEST_CREATED",
+            repository=analysis.repo_name,
+            commit_sha=analysis.commit_sha,
+            details=f"Opened DRAFT pull request #{resp.pr_number or 'preview'} on branch '{resp.branch_name}' ({resp.draft_status}): '{resp.title}' at {resp.pr_url}. Action verified as DRAFT only.",
+            actor="Human Reviewer"
+        )
+    else:
+        audit_logger.record_event(
+            event_type="DRAFT_PULL_REQUEST_FAILED",
+            repository=analysis.repo_name,
+            commit_sha=analysis.commit_sha,
+            details=f"Draft pull request creation failed for '{resp.branch_name}': {resp.message}",
+            actor="Human Reviewer"
+        )
 
     return resp
 

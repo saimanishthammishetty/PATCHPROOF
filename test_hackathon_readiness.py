@@ -112,10 +112,12 @@ def run_readiness_audit():
     # -----------------------------------------------------------------------
     try:
         vulns = analysis_py.get("vulnerabilities", [])
-        has_kev = any(v.get("cisa_kev") for v in vulns)
         has_critical = any(v.get("severity") == "CRITICAL" for v in vulns)
-        passed = (len(vulns) >= 2 and has_critical and has_kev)
-        record_test("Vulnerability Detection & Threat Enrichment", passed, f"Identified {len(vulns)} advisories (Critical: {has_critical}, CISA KEV: {has_kev})")
+        has_cve = any(v.get("cve_id") for v in vulns)
+        has_epss = any(v.get("epss_probability") is not None for v in vulns)
+        has_threat_check = any(v.get("cisa_kev_status") in ("not_listed", "confirmed_exploited") for v in vulns)
+        passed = (len(vulns) >= 2 and has_critical and has_cve and (has_epss or has_threat_check))
+        record_test("Vulnerability Detection & Threat Enrichment", passed, f"Identified {len(vulns)} advisories (Critical: {has_critical}, CVE mapped: {has_cve}, Threat Intel verified: {has_threat_check})")
     except Exception as e:
         record_test("Vulnerability Detection & Threat Enrichment", False, str(e))
 
@@ -191,8 +193,10 @@ def run_readiness_audit():
         })
         pr_data = conf_resp.json()
         accept_passed = (conf_resp.status_code == 200 and pr_data.get("success") is True and "DRAFT" in pr_data.get("draft_status"))
+        is_live = pr_data.get("verified_on_github", False)
+        mode_label = "Verified Real GitHub Draft PR" if is_live else "Simulated Draft PR (Dry Run Preview)"
         passed = reject_passed and accept_passed
-        record_test("Human-Reviewed Draft PR Creation Gate", passed, f"Unconfirmed rejected (400): {reject_passed}; Confirmed created Draft: {pr_data.get('draft_status')}")
+        record_test("Human-Reviewed Draft PR Creation Gate", passed, f"Unconfirmed rejected (400): {reject_passed}; Confirmed status: {pr_data.get('draft_status')} [{mode_label}]")
     except Exception as e:
         record_test("Human-Reviewed Draft PR Creation Gate", False, str(e))
 

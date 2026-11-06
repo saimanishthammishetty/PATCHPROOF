@@ -455,7 +455,12 @@ export function App() {
               <SBOMTab analysisId={analysisResult.id} components={analysisResult.components} />
             )}
             {activeTab === 'vulnerabilities' && (
-              <VulnerabilitiesTab vulnerabilities={analysisResult.vulnerabilities} />
+              <VulnerabilitiesTab
+                vulnerabilities={analysisResult.vulnerabilities}
+                remediations={analysisResult.remediations}
+                onSelectTab={(tab: any) => setActiveTab(tab)}
+                riskOverview={analysisResult.risk_overview}
+              />
             )}
             {activeTab === 'secrets' && (
               <SecretsTab secrets={analysisResult.secrets} />

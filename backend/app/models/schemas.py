@@ -15,15 +15,21 @@ class Component(BaseModel):
     direct: bool = True
     license: Optional[str] = "Unknown"
     manifest_path: str
-    reachability: str = "unknown" # reachable, not_reachable, unknown
+    reachability: str = "direct_dependency" # direct_dependency, transitive_dependency, runtime_reachability_unverified, runtime_reachable
     vulnerability_count: int = 0
     risk_score: float = 0.0
     dependencies: List[str] = Field(default_factory=list)
-    scope: str = "production" # production, development, test, fixture
+    scope: str = "production" # production, development, test, fixture, unclassified
+    scope_reason: Optional[str] = None
+    scope_confidence: str = "High" # High, Medium, Low
+    line_number: Optional[int] = None
+    manifest_snippet: Optional[str] = None
 
 class VulnerabilityFinding(BaseModel):
     id: str # GHSA-..., CVE-...
     aliases: List[str] = Field(default_factory=list)
+    cve_id: Optional[str] = None # Primary CVE ID e.g. CVE-2018-18074, or None
+    cve_ids: List[str] = Field(default_factory=list) # All identified CVE identifiers
     package: str
     ecosystem: str
     affected_version: str
@@ -31,16 +37,26 @@ class VulnerabilityFinding(BaseModel):
     severity: str # CRITICAL, HIGH, MEDIUM, LOW
     cvss_score: Optional[float] = None
     epss_probability: Optional[float] = None
+    epss_percentile: Optional[float] = None
+    epss_source: Optional[str] = None # "FIRST EPSS API", "Local Cache", "Unavailable"
     cisa_kev: bool = False
+    cisa_kev_status: str = "not_listed" # "confirmed_exploited", "not_listed", "unavailable"
+    cisa_kev_date_added: Optional[str] = None
+    threat_intel_source: Optional[str] = None # e.g. "CISA KEV Catalog"
     affected_range: str = ""
     source_links: List[str] = Field(default_factory=list)
     dependency_path: List[str] = Field(default_factory=list)
-    reachability: str = "unknown" # reachable, not_reachable, unknown
+    reachability: str = "runtime_reachability_unverified" # direct_dependency, transitive_dependency, runtime_reachability_unverified, runtime_reachable
     recommended_action: str
     explanation: str
+    description: Optional[str] = None
     confidence: str # High, Medium, Low
     confidence_reason: str = ""
-    scope: str = "production" # production, development, test, fixture
+    scope: str = "production" # production, development, test, fixture, unclassified
+    scope_reason: Optional[str] = None
+    manifest_line: Optional[int] = None
+    manifest_snippet: Optional[str] = None
+    manifest_path: Optional[str] = None
 
 class SecretFinding(BaseModel):
     secret_type: str
@@ -53,7 +69,10 @@ class SecretFinding(BaseModel):
     remediation_instructions: str
     is_synthetic: bool = False
     synthetic_reason: Optional[str] = None
-    scope: str = "production" # production, development, test, documentation
+    scope: str = "production" # production, development, test, documentation, fixture
+    secret_category: str = "Potential real credential" # Potential real credential, Synthetic/example credential, Test credential, Documentation example, Unclassified
+    classification_reason: Optional[str] = None
+    rotation_guidance: Optional[str] = None
 
 class DependencyHealthFinding(BaseModel):
     package: str
@@ -96,9 +115,18 @@ class DraftPRResponse(BaseModel):
     success: bool
     draft_status: str = "DRAFT"
     pr_url: Optional[str] = None
+    pr_number: Optional[int] = None
     branch_name: str
+    base_branch: str = "main"
+    head_branch: Optional[str] = None
+    commit_sha: Optional[str] = None
+    changed_files: List[str] = Field(default_factory=list)
+    repo_owner: Optional[str] = None
+    repo_name: Optional[str] = None
     title: str
     message: str
+    is_simulation: bool = False
+    verified_on_github: bool = False
     safety_notice: str = "PATCHPROOF creates draft pull requests for human review only and will never automatically merge changes."
 
 class AuditEntry(BaseModel):

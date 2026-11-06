@@ -66,6 +66,10 @@ class RepositoryService:
             pass
 
         target_dir = TEMP_DIR / f"{repo_name}_{url_hash}_{run_suffix}"
+        if target_dir.exists():
+            _safe_rmtree(target_dir)
+        while target_dir.exists():
+            target_dir = TEMP_DIR / f"{repo_name}_{url_hash}_{uuid.uuid4().hex[:8]}"
         
         # Perform shallow clone
         clone_cmd = ["git", "clone", "--depth", "1"]
@@ -78,6 +82,8 @@ class RepositoryService:
                 clone_cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=45,
                 check=False
             )
@@ -94,6 +100,8 @@ class RepositoryService:
             ["git", "-C", str(target_dir), "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
             check=False
         )
