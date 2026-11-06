@@ -2,7 +2,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from app.models.schemas import AuditEntry
-from app.core.security import redact_secret_string
+from app.core.security import redact_secrets_in_content
 
 class AuditService:
     def __init__(self):
@@ -17,7 +17,7 @@ class AuditService:
         actor: str = "System"
     ) -> AuditEntry:
         # Guarantee raw secrets never appear in audit
-        clean_details = redact_secret_string(details)
+        clean_details = redact_secrets_in_content(details)
         now = datetime.now(timezone.utc).isoformat()
         
         # Calculate cryptographic integrity hash for tamper-evident logs

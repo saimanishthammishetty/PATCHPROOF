@@ -186,3 +186,38 @@ def test_case_insensitive_manifest_match():
         assert "---" in diff and "+++" in diff, "Expected valid unified diff with headers"
         assert "5.4" in diff, "Expected proposed version in diff"
 
+
+# ---------------------------------------------------------------------------
+# Test 6: Secret-redacted manifest diff treated as display preview
+# ---------------------------------------------------------------------------
+
+def test_secret_redacted_diff_treated_as_display_preview():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        repo_path = Path(tmpdir)
+        manifest = repo_path / "requirements.txt"
+        secret_token = "AKIA1234567890ABCDEF"
+        manifest.write_text(f"requests==2.19.1\n# AWS Key: {secret_token}\n", encoding="utf-8")
+
+        comp = make_component("requests", "2.19.1")
+        vuln = make_vuln("requests", "2.31.0")
+
+        proposals = RemediationService.generate_remediations(
+            repo_path=repo_path,
+            vulnerabilities=[vuln],
+            components=[comp],
+        )
+
+        assert len(proposals) == 1
+        p = proposals[0]
+
+        # Ensure secrets are never exposed
+        assert secret_token not in p.original_content
+        assert secret_token not in p.modified_content
+        assert secret_token not in p.diff
+
+        # Ensure treated as display preview and not guaranteed-applicable patch
+        assert "Display preview only" in p.verification_status
+        assert any("display preview only" in note.lower() for note in p.compatibility_concerns)
+        assert "[Display Preview Only" in p.reason
+
+

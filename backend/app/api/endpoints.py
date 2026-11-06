@@ -23,6 +23,13 @@ from app.services.debug_service import DebugService
 
 router = APIRouter(prefix="/api", tags=["Analyses"])
 
+@router.get("/health")
+def api_health_check():
+    return {
+        "status": "healthy",
+        "safety_guard": "NEVER_MERGE_ACTIVE"
+    }
+
 # Store active analysis results in memory
 ANALYSES_STORE: Dict[str, AnalysisResult] = {}
 REPO_PATHS_STORE: Dict[str, str] = {}
@@ -105,11 +112,16 @@ async def start_analysis(request: AnalysisRequest):
 
     # 3. Vulnerability lookup
     vulnerabilities = await VulnerabilityService.scan_components(components)
+    scan_source = (
+        "Live OSV.dev" if VulnerabilityService.last_scan_mode == "live_osv"
+        else ("Local Offline Advisory Database" if VulnerabilityService.last_scan_mode == "offline"
+              else "Local Fallback Advisory Database (Network Fallback)")
+    )
     audit_logger.record_event(
         event_type="VULNERABILITY_SCAN_COMPLETED",
         repository=repo_name,
         commit_sha=commit_sha,
-        details=f"OSV.dev scan identified {len(vulnerabilities)} unique security vulnerabilities"
+        details=f"{scan_source} scan identified {len(vulnerabilities)} unique security vulnerabilities"
     )
 
     # 4. Secret scanning

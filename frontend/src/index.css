@@ -8,29 +8,61 @@
 
 body {
   margin: 0;
-  background-color: #090812;
-  color: #F4F1FF;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #111315;
+  color: #E8EAED;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.15), transparent),
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 100% 100%, 32px 32px, 32px 32px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090812;
+  background: #111315;
 }
 ::-webkit-scrollbar-thumb {
-  background: #201B38;
+  background: #24282D;
   border-radius: 4px;
+  border: 1px solid #30363B;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8B5CF6;
+  background: #35A477;
+}
+
+/* Enterprise Card & Panel styles (Linear/GitHub style) */
+.enterprise-card, .cyber-card {
+  background-color: #1B1E21;
+  border: 1px solid #30363B;
+  border-radius: 8px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.enterprise-card:hover, .cyber-card:hover {
+  border-color: #454D54;
+}
+
+/* Restrained accent indicators */
+.cyber-glow-cyan, .cyber-glow-violet, .cyber-glow-critical {
+  box-shadow: none;
+}
+
+/* Code Diff styling (Developer standard) */
+.diff-added {
+  background-color: rgba(53, 164, 119, 0.12);
+  color: #35A477;
+}
+
+.diff-removed {
+  background-color: rgba(224, 82, 82, 0.12);
+  color: #E05252;
+}
+
+.diff-header {
+  background-color: #16191D;
+  color: #92999F;
+  font-weight: 500;
 }

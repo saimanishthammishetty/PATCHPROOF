@@ -177,6 +177,42 @@ class DebugService:
         return None, None, None
 
     @classmethod
+    def _calculate_feature_contributions(
+        cls, model, code: str, pred_idx: int, top_k: int = 3
+    ) -> Tuple[List[Tuple[str, float]], List[Tuple[str, float]]]:
+        """
+        Calculates linear model feature contributions for the specific predicted class index.
+        Uses X_j * W_{pred_idx, j} to extract tokens that statistically correlate with
+        the archetype decision, without asserting causal defect attribution.
+        """
+        try:
+            tfidf = model.named_steps.get("tfidf")
+            clf = model.named_steps.get("clf")
+            if tfidf is None or clf is None or not hasattr(clf, "coef_"):
+                return [], []
+
+            feature_names = tfidf.get_feature_names_out()
+            x_vec = tfidf.transform([code])
+            coo = x_vec.tocoo()
+            if coo.nnz == 0:
+                return [], []
+
+            class_coefs = clf.coef_[pred_idx]  # Shape: (num_features,)
+            contributions = []
+            for col_idx, val in zip(coo.col, coo.data):
+                weight = class_coefs[col_idx]
+                contrib = float(val * weight)
+                contributions.append((feature_names[col_idx], contrib))
+
+            contributions.sort(key=lambda item: item[1], reverse=True)
+            top_positive = [(tok, round(score, 4)) for tok, score in contributions if score > 0][:top_k]
+            top_negative = [(tok, round(score, 4)) for tok, score in reversed(contributions) if score < 0][:top_k]
+            return top_positive, top_negative
+        except Exception as e:
+            logger.warning(f"Feature contribution calculation failed: {e}")
+            return [], []
+
+    @classmethod
     def analyze_code(cls, request: CodeDebugRequest) -> CodeDebugResponse:
         # 1. Validation
         code = request.code
@@ -254,6 +290,8 @@ class DebugService:
             ))
 
         # 4. Formulate Transparent Explanation
+        top_pos, _ = cls._calculate_feature_contributions(model, code, pred_idx, top_k=3)
+
         if not issue_detected:
             explanation = (
                 "No known defect pattern recognized by the archetype classifier. "
@@ -262,9 +300,18 @@ class DebugService:
             )
         else:
             loc_str = f" at line {faulty_lno}" if faulty_lno else " (specific line localization unconfirmed)"
+            feature_detail = ""
+            if top_pos:
+                pos_tokens = ", ".join(f"'{tok}'" for tok, _ in top_pos)
+                feature_detail = (
+                    f" Statistical feature analysis identified n-gram tokens ({pos_tokens}) "
+                    f"that correlate with '{pred_cat}' training patterns (class-specific linear weights). "
+                    "Note: Statistical feature correlations reflect training pattern proximity, not causal defect proof."
+                )
+
             explanation = (
                 f"Potential {cat_label.lower()} identified{loc_str}. "
-                f"Model matched syntactic patterns associated with '{pred_cat}' with confidence {conf_score * 100:.1f}%. "
+                f"Model matched syntactic patterns associated with '{pred_cat}' with confidence {conf_score * 100:.1f}%.{feature_detail} "
                 "Human peer review is recommended before applying fixes."
             )
 

@@ -209,3 +209,4 @@ def test_remediation_diff_secret_sanitization(tmp_path):
     assert raw_secret not in p.modified_content, "Raw secret leaked in modified_content"
     assert raw_secret not in p.diff, "Raw secret leaked in diff"
     assert "*" in p.diff, "Expected redacted asterisks in diff"
+    assert "Display preview only" in p.verification_status, "Diff with redacted secrets must be marked as display preview only"

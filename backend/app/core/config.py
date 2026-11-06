@@ -18,3 +18,14 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 # Prohibit merge operations globally
 NEVER_MERGE = True
 
+# Offline mode and OSV query network timeout
+PATCHPROOF_OFFLINE = os.environ.get("PATCHPROOF_OFFLINE", "").strip().lower() in ("1", "true", "yes")
+try:
+    OSV_TIMEOUT = float(os.environ.get("PATCHPROOF_OSV_TIMEOUT", "2.0"))
+    if OSV_TIMEOUT <= 0:
+        OSV_TIMEOUT = 2.0
+except (ValueError, TypeError):
+    OSV_TIMEOUT = 2.0
+
+
+

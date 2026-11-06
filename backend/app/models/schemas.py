@@ -19,6 +19,7 @@ class Component(BaseModel):
     vulnerability_count: int = 0
     risk_score: float = 0.0
     dependencies: List[str] = Field(default_factory=list)
+    scope: str = "production" # production, development, test, fixture
 
 class VulnerabilityFinding(BaseModel):
     id: str # GHSA-..., CVE-...
@@ -39,6 +40,7 @@ class VulnerabilityFinding(BaseModel):
     explanation: str
     confidence: str # High, Medium, Low
     confidence_reason: str = ""
+    scope: str = "production" # production, development, test, fixture
 
 class SecretFinding(BaseModel):
     secret_type: str
@@ -49,6 +51,9 @@ class SecretFinding(BaseModel):
     confidence: str = "High"
     masked_value: str
     remediation_instructions: str
+    is_synthetic: bool = False
+    synthetic_reason: Optional[str] = None
+    scope: str = "production" # production, development, test, documentation
 
 class DependencyHealthFinding(BaseModel):
     package: str
@@ -106,9 +111,11 @@ class AuditEntry(BaseModel):
     integrity_hash: str
 
 class RiskOverview(BaseModel):
-    score: float # 0 - 100
+    score: float # 0 - 100 (Total repository composite risk)
     label: str # Critical, High, Medium, Low
-    breakdown: Dict[str, float]
+    production_score: float = 0.0 # 0 - 100 (Isolated production scope risk)
+    production_label: str = "Low" # Critical, High, Medium, Low
+    breakdown: Dict[str, Any]
     summary_explanation: str
 
 class AnalysisResult(BaseModel):

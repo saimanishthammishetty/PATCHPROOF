@@ -1,4 +1,6 @@
 import os
+import stat
+import uuid
 import shutil
 import subprocess
 import hashlib
@@ -6,6 +8,28 @@ from pathlib import Path
 from typing import Tuple, Dict, Any, Optional
 from app.core.config import TEMP_DIR, FIXTURES_DIR
 from app.core.security import validate_repository_url
+
+def _safe_rmtree(path: Path) -> None:
+    """Robust directory removal on Windows handling read-only git pack files."""
+    if not path.exists():
+        return
+    def _handle_readonly(func, p, excinfo):
+        try:
+            os.chmod(p, stat.S_IWRITE)
+            func(p)
+        except Exception:
+            pass
+
+    try:
+        shutil.rmtree(path, onerror=_handle_readonly)
+    except Exception:
+        pass
+
+    if path.exists():
+        try:
+            subprocess.run(["cmd", "/c", "rmdir", "/s", "/q", str(path)], capture_output=True, timeout=10)
+        except Exception:
+            pass
 
 class RepositoryService:
     @staticmethod
@@ -29,16 +53,19 @@ class RepositoryService:
         if not valid:
             raise ValueError(msg)
         
-        # Compute safe unique folder name
+        # Compute safe unique folder name with run suffix to prevent collision on repeated/concurrent scans
+        run_suffix = uuid.uuid4().hex[:8]
         url_hash = hashlib.sha256(f"{repo_url}::{branch}".encode()).hexdigest()[:12]
         repo_name = repo_url.rstrip("/").split("/")[-1].replace(".git", "")
-        target_dir = TEMP_DIR / f"{repo_name}_{url_hash}"
         
-        # Clean existing folder if needed
-        if target_dir.exists():
-            shutil.rmtree(target_dir, ignore_errors=True)
-            
-        target_dir.mkdir(parents=True, exist_ok=True)
+        # Clean any previous stale clones for this repository hash
+        try:
+            for stale in TEMP_DIR.glob(f"{repo_name}_{url_hash}*"):
+                _safe_rmtree(stale)
+        except Exception:
+            pass
+
+        target_dir = TEMP_DIR / f"{repo_name}_{url_hash}_{run_suffix}"
         
         # Perform shallow clone
         clone_cmd = ["git", "clone", "--depth", "1"]
@@ -55,11 +82,11 @@ class RepositoryService:
                 check=False
             )
             if res.returncode != 0:
-                # If branch failed or shallow clone had issues, raise meaningful error
+                _safe_rmtree(target_dir)
                 err_msg = res.stderr.strip() or "Git clone failed"
                 raise RuntimeError(f"Failed to clone repository: {err_msg}")
         except subprocess.TimeoutExpired:
-            shutil.rmtree(target_dir, ignore_errors=True)
+            _safe_rmtree(target_dir)
             raise TimeoutError("Repository cloning timed out (limit: 45s). Repository may be too large.")
         
         # Get head commit SHA

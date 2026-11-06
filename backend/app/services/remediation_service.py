@@ -194,11 +194,16 @@ class RemediationService:
                 if mod_raw == orig_raw:
                     continue
 
-                # Generate a genuine unified diff.
+                # Redact secrets in manifest contents before diff generation.
+                orig_text = redact_secrets_in_content(orig_raw)
+                mod_text = redact_secrets_in_content(mod_raw)
+                secrets_redacted = (orig_text != orig_raw) or (mod_text != mod_raw)
+
+                # Generate a genuine unified diff from sanitized contents.
                 diff_text = "".join(
                     difflib.unified_diff(
-                        orig_raw.splitlines(keepends=True),
-                        mod_raw.splitlines(keepends=True),
+                        orig_text.splitlines(keepends=True),
+                        mod_text.splitlines(keepends=True),
                         fromfile=f"a/{matching_comp.manifest_path}",
                         tofile=f"b/{matching_comp.manifest_path}",
                         lineterm="\n",
@@ -209,10 +214,8 @@ class RemediationService:
                 if not diff_text or "--- " not in diff_text or "+++ " not in diff_text:
                     continue
 
-                # Redact detected credentials while preserving manifest text.
-                orig_text = redact_secrets_in_content(orig_raw)
-                mod_text = redact_secrets_in_content(mod_raw)
-                sanitized_diff = redact_secrets_in_content(diff_text)
+                # The diff is already sanitized; treated as display preview if secrets were redacted
+                sanitized_diff = diff_text
 
             except (OSError, UnicodeError, ValueError):
                 # Fail closed: do not return unsanitized manifest content.
@@ -241,6 +244,12 @@ class RemediationService:
 
             compatibility_notes = []
 
+            if secrets_redacted:
+                compatibility_notes.append(
+                    "Display preview only: manifest contains redacted secrets. "
+                    "This diff is a display preview only and cannot be applied directly as an executable patch."
+                )
+
             if breaking:
                 compatibility_notes.append(
                     f"Major version bump from {current_ver} "
@@ -251,6 +260,23 @@ class RemediationService:
                     "Minor/patch update: backward compatibility expected."
                 )
 
+            if secrets_redacted:
+                verification_status = "Display preview only (contains redacted secrets; not guaranteed-applicable patch)"
+                reason_str = (
+                    f"[Display Preview Only - Redacted Secrets] Resolves {len(pkg_vulns)} security advisory(ies): "
+                    f"{', '.join(vuln.id for vuln in pkg_vulns)}"
+                )
+            else:
+                verification_status = (
+                    "Verified compatible"
+                    if not breaking
+                    else "Tests recommended"
+                )
+                reason_str = (
+                    f"Resolves {len(pkg_vulns)} security advisory(ies): "
+                    f"{', '.join(vuln.id for vuln in pkg_vulns)}"
+                )
+
             # Create the remediation proposal.
             proposal = RemediationProposal(
                 id=f"rem-{uuid.uuid4().hex[:8]}",
@@ -258,10 +284,7 @@ class RemediationService:
                 ecosystem=eco,
                 current_version=current_ver,
                 proposed_version=target_fix,
-                reason=(
-                    f"Resolves {len(pkg_vulns)} security advisory(ies): "
-                    f"{', '.join(vuln.id for vuln in pkg_vulns)}"
-                ),
+                reason=reason_str,
                 advisories_resolved=[
                     vuln.id for vuln in pkg_vulns
                 ],
@@ -274,11 +297,7 @@ class RemediationService:
                 modified_content=mod_text[:2000],
                 diff=sanitized_diff,
                 manifest_diff=sanitized_diff,
-                verification_status=(
-                    "Verified compatible"
-                    if not breaking
-                    else "Tests recommended"
-                ),
+                verification_status=verification_status,
             )
 
             proposals.append(proposal)

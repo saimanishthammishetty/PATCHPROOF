@@ -7,6 +7,21 @@ from app.models.schemas import Component
 
 class DependencyParser:
     @staticmethod
+    def determine_scope(manifest_path: str, is_dev: bool = False) -> str:
+        """
+        Determines component scope based on manifest path and dependency section.
+        Returns: 'fixture' | 'test' | 'development' | 'production'
+        """
+        norm_path = manifest_path.replace("\\", "/").lower()
+        if "fixture" in norm_path or "fixtures" in norm_path:
+            return "fixture"
+        if "test" in norm_path or "tests" in norm_path:
+            return "test"
+        if is_dev or "dev-requirements" in norm_path or "requirements-dev" in norm_path:
+            return "development"
+        return "production"
+
+    @staticmethod
     def parse_repository(repo_path: Path) -> List[Component]:
         """
         Walks the repository and extracts all components from supported manifests.
@@ -78,7 +93,8 @@ class DependencyParser:
                         purl=purl,
                         direct=True,
                         manifest_path=rel_path,
-                        license="Unknown"
+                        license="Unknown",
+                        scope=DependencyParser.determine_scope(rel_path)
                     )
         except Exception:
             pass
